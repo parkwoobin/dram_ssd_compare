@@ -133,12 +133,14 @@ python -m db.database
 
 ## 환경변수
 
-현재 코드에서 실제로 사용하는 환경변수는 아래 2개입니다.
+현재 코드에서 실제로 사용하는 환경변수는 아래 4개입니다.
 
 | 변수명 | 기본값 | 설명 |
 |---|---:|---|
 | `CRAWL_START_HOUR` | `9` | 크롤링 허용 시작 시각(KST, 포함) |
 | `CRAWL_END_HOUR` | `18` | 크롤링 허용 종료 시각(KST, 미포함) |
+| `ENABLE_SCHEDULER` | `true` | 스케줄러 실행 여부 (멀티 인스턴스 시 1대만 true 권장) |
+| `ENABLE_INITIAL_CRAWL` | `true` | 서버 시작 시 DB 비어있을 때 초기 강제 크롤링 실행 여부 |
 
 예시:
 
@@ -157,6 +159,20 @@ $env:CRAWL_END_HOUR = "20"
 .\venv\Scripts\python.exe -m uvicorn api.main:app --host localhost --port 8000
 ```
 
+### 1-1) 라이브 서버 단일 인스턴스 실행 (권장 기본)
+
+```powershell
+$env:ENABLE_SCHEDULER = "true"
+$env:ENABLE_INITIAL_CRAWL = "true"
+.\venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+### 1-2) 라이브 서버 다중 인스턴스 실행 시
+
+- 인스턴스 1대만 `ENABLE_SCHEDULER=true`
+- 나머지 인스턴스는 `ENABLE_SCHEDULER=false` 로 실행
+- `ENABLE_INITIAL_CRAWL`도 보조 인스턴스에서는 `false` 권장
+
 ### 2) 백그라운드 실행 (PowerShell)
 
 ```powershell
@@ -169,6 +185,62 @@ Start-Process -FilePath ".\venv\Scripts\python.exe" -ArgumentList "-m uvicorn ap
 $procs = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
 if ($procs) { Stop-Process -Id $procs -Force -ErrorAction SilentlyContinue }
 .\venv\Scripts\python.exe -m uvicorn api.main:app --host localhost --port 8000
+```
+
+## Docker 배포
+
+### 1) 이미지 빌드
+
+```powershell
+docker build -t dram-ssd-compare:latest .
+```
+
+### 2) 컨테이너 실행
+
+```powershell
+docker run -d --name dram-ssd-compare -p 8000:8000 --env-file .env -v ${PWD}/data:/app/data dram-ssd-compare:latest
+```
+
+### 3) Docker Compose 실행
+
+```powershell
+docker compose up -d --build
+```
+
+접속: http://localhost:8000
+헬스체크: http://localhost:8000/health, http://localhost:8000/health/ready
+
+운영 확인:
+
+```powershell
+docker compose ps
+docker compose logs -f app
+docker inspect --format='{{json .State.Health}}' dram-ssd-compare
+```
+
+## 모니터링
+
+운영 중에는 아래 순서로 먼저 확인하면 됩니다.
+
+```powershell
+# 1) 컨테이너 상태
+docker compose ps
+
+# 2) 헬스체크 상태
+curl http://localhost:8000/health
+curl http://localhost:8000/health/ready
+
+# 3) 최근 로그 확인
+docker compose logs --tail=100 app
+
+# 4) 자원 사용량 확인
+docker stats dram-ssd-compare
+```
+
+재기동이 필요하면:
+
+```powershell
+docker compose restart app
 ```
 
 ## 장애 대응 체크리스트
