@@ -1,0 +1,23 @@
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Database
+sqlalchemy==2.0.36
+aiosqlite==0.20.0
+
+# Crawler
+playwright==1.49.0
+
+# Scheduler
+apscheduler==3.10.4
+
+# Data processing
+rapidfuzz==3.10.1
+
+# HTML parsing
+beautifulsoup4==4.12.3
+
+# Utilities
+python-dotenv==1.0.1
+httpx==0.28.0

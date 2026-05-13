@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRAM &amp; SSD 가격 비교 | 다나와 vs 스마트컴</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<header>
+  <h1>🖥️ DRAM &amp; SSD 가격 비교</h1>
+  <span id="last-updated">—</span>
+</header>
+
+<div class="container">
+
+  <!-- 카테고리 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" data-cat="memory">💾 메모리 (RAM)</button>
+    <button class="tab-btn" data-cat="ssd">💿 SSD</button>
+  </div>
+
+  <!-- 정렬 버튼 -->
+  <div class="sort-bar">
+    <span>정렬:</span>
+    <button class="sort-btn active" data-sort="popular">인기상품순</button>
+    <button class="sort-btn" data-sort="newest">신상품순</button>
+    <button class="sort-btn" data-sort="price_asc">낮은가격순</button>
+    <button class="sort-btn" data-sort="price_desc">높은가격순</button>
+  </div>
+
+  <!-- 통계 -->
+  <div id="stats-bar" class="stats-bar">—</div>
+
+  <!-- 테이블 -->
+  <div id="table-wrap" class="table-wrap">
+    <table id="compare-table">
+      <thead>
+        <tr>
+          <th class="center" style="width:48px">순위</th>
+          <th style="min-width:240px">다나와 제품명</th>
+          <th class="right" style="width:130px">다나와 가격</th>
+          <th style="min-width:240px">스마트컴 제품명</th>
+          <th class="right" style="width:130px">스마트컴 가격</th>
+          <th class="center" style="width:120px">가격 차이</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6">
+          <div class="loading"><div class="spinner"></div> 로딩 중...</div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top:12px;font-size:11px;color:#9ca3af;text-align:center">
+    다나와 기준 인기상품 비교 · 실시간 크롤링 데이터 (오전 9시~오후 6시, 1시간 간격 업데이트)
+  </p>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
