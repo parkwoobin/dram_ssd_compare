@@ -1,18 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <title>App Icon Logo</title>
-  <desc>Rounded-square app icon version of the traced logo in SVG format, without outer shadow.</desc>
-  <defs>
-    <linearGradient id="bg" x1="128" y1="96" x2="896" y2="928" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#EAF4FF"/>
-    </linearGradient>
-  </defs>
-
-  <rect x="42" y="42" width="940" height="940" rx="180" fill="url(#bg)"/>
-
-  <g transform="translate(203 108) scale(1.65)">
-    <path d="M 0 55 L 0 71 L 1 72 L 1 87 L 3 104 L 3 120 L 4 121 L 4 136 L 5 137 L 5 152 L 6 153 L 6 168 L 7 169 L 7 184 L 9 201 L 9 217 L 10 218 L 10 233 L 11 234 L 11 249 L 12 250 L 12 265 L 13 266 L 13 281 L 15 298 L 19 378 L 20 380 L 94 367 L 97 366 L 121 348 L 156 317 L 85 327 L 78 326 L 61 101 L 64 100 L 65 101 L 87 102 L 96 88 L 113 68 Z M 237 0 L 234 0 L 222 6 L 183 29 L 160 45 L 130 70 L 111 90 L 100 105 L 91 122 L 86 140 L 86 160 L 90 173 L 97 185 L 111 199 L 122 207 L 179 236 L 195 247 L 202 255 L 205 262 L 205 271 L 203 278 L 198 288 L 184 307 L 151 340 L 123 363 L 97 382 L 74 397 L 47 412 L 71 405 L 105 391 L 135 376 L 164 359 L 195 337 L 211 323 L 228 304 L 239 285 L 243 272 L 243 255 L 239 242 L 230 229 L 219 219 L 204 209 L 164 189 L 140 174 L 129 163 L 124 154 L 122 147 L 123 132 L 127 120 L 137 101 L 150 83 L 161 70 L 197 34 Z" fill="#1197D5" fill-rule="evenodd" clip-rule="evenodd"/>
-    <path d="M 355 95 L 175 75 L 163 88 L 150 106 L 154 108 L 317 120 L 329 122 L 343 290 L 338 292 L 324 293 L 243 305 L 229 323 L 205 345 L 200 406 L 253 390 L 247 339 L 249 337 L 373 314 Z M 263 399 L 187 423 L 186 420 L 191 381 L 191 372 L 169 446 Z M 231 427 L 154 466 L 153 464 L 169 409 L 137 489 L 139 489 Z" fill="#005EAD" fill-rule="evenodd" clip-rule="evenodd"/>
+<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg" fill="none">
+ <title>App Icon Logo</title>
+ <desc>Rounded-square app icon version of the traced logo in SVG format, without outer shadow.</desc>
+ <defs>
+  <linearGradient y2="0.94255" x2="0.90851" y1="0.05745" x1="0.09149" id="bg">
+   <stop stop-color="#FFFFFF" offset="0"/>
+   <stop stop-color="#EAF4FF" offset="1"/>
+  </linearGradient>
+ </defs>
+ <g>
+  <title>Layer 1</title>
+  <rect stroke="null" id="svg_1" fill="url(#bg)" rx="180" height="1024" width="1023" y="0" x="0"/>
+  <g id="svg_2" transform="translate(203 108) scale(1.65 1.65)">
+   <path id="svg_3" clip-rule="evenodd" fill-rule="evenodd" fill="#1197D5" d="m0,55l0,16l1,1l0,15l2,17l0,16l1,1l0,15l1,1l0,15l1,1l0,15l1,1l0,15l2,17l0,16l1,1l0,15l1,1l0,15l1,1l0,15l1,1l0,15l2,17l4,80l1,2l74,-13l3,-1l24,-18l35,-31l-71,10l-7,-1l-17,-225l3,-1l1,1l22,1l9,-14l17,-20l-113,-13zm237,-55l-3,0l-12,6l-39,23l-23,16l-30,25l-19,20l-11,15l-9,17l-5,18l0,20l4,13l7,12l14,14l11,8l57,29l16,11l7,8l3,7l0,9l-2,7l-5,10l-14,19l-33,33l-28,23l-26,19l-23,15l-27,15l24,-7l34,-14l30,-15l29,-17l31,-22l16,-14l17,-19l11,-19l4,-13l0,-17l-4,-13l-9,-13l-11,-10l-15,-10l-40,-20l-24,-15l-11,-11l-5,-9l-2,-7l1,-15l4,-12l10,-19l13,-18l11,-13l36,-36l40,-34z"/>
+   <path id="svg_4" clip-rule="evenodd" fill-rule="evenodd" fill="#005EAD" d="m355,95l-180,-20l-12,13l-13,18l4,2l163,12l12,2l14,168l-5,2l-14,1l-81,12l-14,18l-24,22l-5,61l53,-16l-6,-51l2,-2l124,-23l-18,-219zm-92,304l-76,24l-1,-3l5,-39l0,-9l-22,74l94,-47zm-32,28l-77,39l-1,-2l16,-55l-32,80l2,0l92,-62z"/>
   </g>
+ </g>
 </svg>
