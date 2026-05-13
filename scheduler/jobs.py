@@ -10,12 +10,19 @@ from crawler.danawa import crawl as danawa_crawl, CATEGORIES as DANAWA_CATS
 from crawler.smtcom import crawl as smtcom_crawl
 from db.database import AsyncSessionLocal
 from db.models import SourceEnum, CategoryEnum
-from db.crud import upsert_products, create_crawl_log, finish_crawl_log, aggregate_daily_prices
+from db.crud import (
+    upsert_products,
+    create_crawl_log,
+    finish_crawl_log,
+    aggregate_daily_prices,
+    prune_old_products,
+)
 
 logger = logging.getLogger(__name__)
 
 CRAWL_START_HOUR = int(os.getenv("CRAWL_START_HOUR", 9))
 CRAWL_END_HOUR = int(os.getenv("CRAWL_END_HOUR", 18))
+PRODUCT_RETENTION_DAYS = int(os.getenv("PRODUCT_RETENTION_DAYS", 7))
 
 
 async def _run_crawl(source: SourceEnum, category: str):
@@ -56,12 +63,12 @@ async def _run_crawl(source: SourceEnum, category: str):
 
 async def crawl_all(force: bool = False):
     """다나와·스마트컴 메모리·SSD 전체 크롤링. force=True 이면 시간 제한 무시."""
-    hour = datetime.now().hour
+    hour = (datetime.now(timezone.utc) + timedelta(hours=9)).hour
     if not force and not (CRAWL_START_HOUR <= hour < CRAWL_END_HOUR):
-        logger.debug("크롤링 시간 외 (%d시)", hour)
+        logger.debug("크롤링 시간 외 (%d시 KST)", hour)
         return
 
-    logger.info("크롤링 시작 (%d시)%s", hour, " [초기 강제]" if force else "")
+    logger.info("크롤링 시작 (%d시 KST)%s", hour, " [초기 강제]" if force else "")
     tasks = []
     for category in ("memory", "ssd"):
         tasks.append(_run_crawl(SourceEnum.danawa, category))
@@ -78,7 +85,13 @@ async def aggregate_daily(target_date=None):
             target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date() - timedelta(days=1)
         async with AsyncSessionLocal() as session:
             count = await aggregate_daily_prices(session, target_date=target_date)
-        logger.info("일별 가격 집계 완료: %d개 레코드", count)
+            pruned = await prune_old_products(session, retention_days=PRODUCT_RETENTION_DAYS)
+        logger.info(
+            "일별 가격 집계 완료: %d개 레코드, products 정리: %d개 삭제 (%d일 보관)",
+            count,
+            pruned,
+            PRODUCT_RETENTION_DAYS,
+        )
         return count
     except Exception as e:
         logger.error("일별 가격 집계 실패: %s", e)

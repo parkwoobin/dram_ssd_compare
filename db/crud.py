@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta, date as date_type
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, asc
+from sqlalchemy import select, func, desc, asc, delete
 from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum
 
 
@@ -136,6 +136,25 @@ async def aggregate_daily_prices(
 
     await session.commit()
     return total
+
+
+async def prune_old_products(
+    session: AsyncSession,
+    retention_days: int = 7,
+    now: datetime | None = None,
+) -> int:
+    """최근 retention_days일 원본 products만 보관하고 이전 원본은 삭제."""
+    if retention_days < 1:
+        raise ValueError("retention_days must be at least 1")
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    cutoff = now - timedelta(days=retention_days)
+    result = await session.execute(
+        delete(Product).where(Product.crawled_at < cutoff)
+    )
+    await session.commit()
+    return result.rowcount or 0
 
 
 async def _get_today_avg(

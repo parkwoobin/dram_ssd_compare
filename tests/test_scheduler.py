@@ -1,4 +1,4 @@
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 
 from db.models import Base, Product, DailyPrice, SourceEnum, CategoryEnum
 from scheduler.jobs import create_scheduler, aggregate_daily
+from db.crud import prune_old_products
 import scheduler.jobs as jobs_module
 
 
@@ -19,7 +20,7 @@ async def test_create_scheduler_runs_hourly_on_the_hour():
     assert aggregate_job is not None
     assert str(crawl_job.trigger.fields[5]) == "*"
     assert str(crawl_job.trigger.fields[6]) == "0"
-    assert str(aggregate_job.trigger.fields[5]) == "0"
+    assert str(aggregate_job.trigger.fields[5]) == "18"
     assert str(aggregate_job.trigger.fields[6]) == "5"
 
 
@@ -81,3 +82,55 @@ async def test_aggregate_daily_prices_persists_daily_rows(tmp_path, monkeypatch)
     assert danawa_row.min_price == 340000
     assert danawa_row.max_price == 350000
     assert danawa_row.crawl_count == 2
+
+
+@pytest.mark.asyncio
+async def test_prune_old_products_keeps_daily_prices(tmp_path):
+    db_path = tmp_path / "retention.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    now = datetime(2026, 5, 14, 0, 0, tzinfo=timezone.utc)
+    async with session_factory() as session:
+        session.add_all(
+            [
+                Product(
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="old product",
+                    price=100,
+                    rank=1,
+                    crawled_at=now - timedelta(days=8),
+                ),
+                Product(
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="recent product",
+                    price=200,
+                    rank=1,
+                    crawled_at=now - timedelta(days=6),
+                ),
+                DailyPrice(
+                    date=date(2026, 5, 1),
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="old product",
+                    avg_price=100,
+                    min_price=100,
+                    max_price=100,
+                    crawl_count=1,
+                ),
+            ]
+        )
+        await session.commit()
+
+        deleted = await prune_old_products(session, retention_days=7, now=now)
+        product_count = await session.scalar(select(func.count()).select_from(Product))
+        daily_count = await session.scalar(select(func.count()).select_from(DailyPrice))
+
+    assert deleted == 1
+    assert product_count == 1
+    assert daily_count == 1

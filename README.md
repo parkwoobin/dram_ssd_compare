@@ -141,6 +141,7 @@ python -m db.database
 | `CRAWL_END_HOUR` | `18` | 크롤링 허용 종료 시각(KST, 미포함) |
 | `ENABLE_SCHEDULER` | `true` | 스케줄러 실행 여부 (멀티 인스턴스 시 1대만 true 권장) |
 | `ENABLE_INITIAL_CRAWL` | `true` | 서버 시작 시 DB 비어있을 때 초기 강제 크롤링 실행 여부 |
+| `PRODUCT_RETENTION_DAYS` | `7` | 원본 크롤링 데이터(`products`) 보관 기간. `daily_prices`는 삭제하지 않음 |
 
 예시:
 
