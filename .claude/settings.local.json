@@ -9,7 +9,10 @@
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/api/trend/history?category=memory&danawa_name=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90+DDR5-5600+%2816GB%29&days=30\" -UseBasicParsing -TimeoutSec 10; $r.Content | ConvertFrom-Json | ConvertTo-Json } catch { $_.Exception.Message })",
       "Bash(python -c ' *)",
       "PowerShell($procs = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if \\($procs\\) { Stop-Process -Id $procs -Force -ErrorAction SilentlyContinue; Write-Host \"Killed: $procs\" } else { Write-Host \"No process on 8000\" }; Start-Sleep 2; Write-Host \"Done\")",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(flyctl logs *)",
+      "Bash(~/.fly/bin/flyctl logs *)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" status --app dram-ssd-compare)"
     ]
   }
 }
