@@ -1,20 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <title>App Icon Logo</title>
-  <desc>Rounded-square app icon version of the traced logo in SVG format.</desc>
+  <desc>Rounded-square app icon version of the traced logo in SVG format, without outer shadow.</desc>
   <defs>
     <linearGradient id="bg" x1="128" y1="96" x2="896" y2="928" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#FFFFFF"/>
       <stop offset="1" stop-color="#EAF4FF"/>
     </linearGradient>
-    <filter id="shadow" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#6CAFE3" flood-opacity="0.28"/>
-    </filter>
   </defs>
 
-  <g filter="url(#shadow)">
-    <rect x="42" y="42" width="940" height="940" rx="180" fill="url(#bg)"/>
-  </g>
+  <rect x="42" y="42" width="940" height="940" rx="180" fill="url(#bg)"/>
 
   <g transform="translate(203 108) scale(1.65)">
     <path d="M 0 55 L 0 71 L 1 72 L 1 87 L 3 104 L 3 120 L 4 121 L 4 136 L 5 137 L 5 152 L 6 153 L 6 168 L 7 169 L 7 184 L 9 201 L 9 217 L 10 218 L 10 233 L 11 234 L 11 249 L 12 250 L 12 265 L 13 266 L 13 281 L 15 298 L 19 378 L 20 380 L 94 367 L 97 366 L 121 348 L 156 317 L 85 327 L 78 326 L 61 101 L 64 100 L 65 101 L 87 102 L 96 88 L 113 68 Z M 237 0 L 234 0 L 222 6 L 183 29 L 160 45 L 130 70 L 111 90 L 100 105 L 91 122 L 86 140 L 86 160 L 90 173 L 97 185 L 111 199 L 122 207 L 179 236 L 195 247 L 202 255 L 205 262 L 205 271 L 203 278 L 198 288 L 184 307 L 151 340 L 123 363 L 97 382 L 74 397 L 47 412 L 71 405 L 105 391 L 135 376 L 164 359 L 195 337 L 211 323 L 228 304 L 239 285 L 243 272 L 243 255 L 239 242 L 230 229 L 219 219 L 204 209 L 164 189 L 140 174 L 129 163 L 124 154 L 122 147 L 123 132 L 127 120 L 137 101 L 150 83 L 161 70 L 197 34 Z" fill="#1197D5" fill-rule="evenodd" clip-rule="evenodd"/>
