@@ -243,6 +243,18 @@ docker stats dram-ssd-compare
 docker compose restart app
 ```
 
+## Oracle Cloud Always Free 이전
+
+Fly.io에서 Oracle Cloud Always Free VM으로 옮길 때는 `docker-compose.oracle.yml`을 사용합니다.
+
+```bash
+cp .env.example .env
+mkdir -p data
+docker compose -f docker-compose.oracle.yml up -d --build
+```
+
+상세 절차는 [docs/ORACLE_CLOUD_MIGRATION.md](docs/ORACLE_CLOUD_MIGRATION.md)를 참고하세요.
+
 ## 장애 대응 체크리스트
 
 - 서버 기동 확인
