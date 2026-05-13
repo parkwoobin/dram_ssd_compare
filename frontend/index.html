@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -21,44 +22,115 @@
   <div class="tabs">
     <button class="tab-btn active" data-cat="memory">💾 메모리 (RAM)</button>
     <button class="tab-btn" data-cat="ssd">💿 SSD</button>
+    <button class="tab-btn" data-cat="trend">📈 가격 추세</button>
   </div>
 
-  <!-- 정렬 버튼 -->
-  <div class="sort-bar">
-    <span>정렬:</span>
-    <button class="sort-btn active" data-sort="popular">인기상품순</button>
-    <button class="sort-btn" data-sort="newest">신상품순</button>
-    <button class="sort-btn" data-sort="price_asc">낮은가격순</button>
-    <button class="sort-btn" data-sort="price_desc">높은가격순</button>
+  <!-- 비교 섹션 -->
+  <div id="compare-section">
+    <!-- 검색 -->
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="🔍 제품명 검색..." autocomplete="off" />
+    </div>
+
+    <!-- 정렬 -->
+    <div class="sort-bar">
+      <span>정렬:</span>
+      <button class="sort-btn active" data-sort="popular">인기상품순</button>
+      <button class="sort-btn" data-sort="newest">신상품순</button>
+      <button class="sort-btn" data-sort="price_asc">낮은가격순</button>
+      <button class="sort-btn" data-sort="price_desc">높은가격순</button>
+    </div>
+
+    <!-- 메모리 필터 -->
+    <div id="memory-filters" class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">DDR:</span>
+        <button class="filter-btn active" data-ddr="">전체</button>
+        <button class="filter-btn" data-ddr="4">DDR4만</button>
+        <button class="filter-btn" data-ddr="5">DDR5만</button>
+      </div>
+      <label class="toggle-label">
+        <input type="checkbox" id="ecc-exclude" />
+        <span class="toggle-text">ECC 제외</span>
+      </label>
+    </div>
+
+    <!-- SSD 필터 -->
+    <div id="ssd-filters" class="filter-bar" style="display:none">
+      <div class="filter-group">
+        <span class="filter-label">용량:</span>
+        <button class="filter-btn active" data-cap="">전체</button>
+        <button class="filter-btn" data-cap="256">256GB</button>
+        <button class="filter-btn" data-cap="512">512GB</button>
+        <button class="filter-btn" data-cap="1024">1TB</button>
+        <button class="filter-btn" data-cap="2048">2TB</button>
+        <button class="filter-btn" data-cap="4096">4TB</button>
+      </div>
+    </div>
+
+    <!-- 통계 -->
+    <div id="stats-bar" class="stats-bar">—</div>
+
+    <!-- 테이블 -->
+    <div id="table-wrap" class="table-wrap">
+      <table id="compare-table">
+        <thead>
+          <tr>
+            <th class="center" style="width:48px">순위</th>
+            <th style="min-width:240px">다나와 제품명</th>
+            <th class="right" style="width:130px">다나와 가격</th>
+            <th style="min-width:240px">스마트컴 제품명</th>
+            <th class="right" style="width:130px">스마트컴 가격</th>
+            <th class="center" style="width:120px">가격 차이</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="6">
+            <div class="loading"><div class="spinner"></div> 로딩 중...</div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:12px;font-size:11px;color:#9ca3af;text-align:center">
+      다나와 기준 인기상품 비교 · 실시간 크롤링 데이터 (오전 9시~오후 6시, 1시간 간격 업데이트)
+    </p>
   </div>
 
-  <!-- 통계 -->
-  <div id="stats-bar" class="stats-bar">—</div>
-
-  <!-- 테이블 -->
-  <div id="table-wrap" class="table-wrap">
-    <table id="compare-table">
-      <thead>
-        <tr>
-          <th class="center" style="width:48px">순위</th>
-          <th style="min-width:240px">다나와 제품명</th>
-          <th class="right" style="width:130px">다나와 가격</th>
-          <th style="min-width:240px">스마트컴 제품명</th>
-          <th class="right" style="width:130px">스마트컴 가격</th>
-          <th class="center" style="width:120px">가격 차이</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="6">
-          <div class="loading"><div class="spinner"></div> 로딩 중...</div>
-        </td></tr>
-      </tbody>
-    </table>
+  <!-- 추세 섹션 -->
+  <div id="trend-section" style="display:none">
+    <div class="trend-header">
+      <div class="trend-cat-tabs">
+        <button class="trend-cat-btn active" data-tcat="memory">💾 메모리</button>
+        <button class="trend-cat-btn" data-tcat="ssd">💿 SSD</button>
+      </div>
+      <div class="trend-controls">
+        <select id="trend-product-select" class="trend-select">
+          <option value="">제품 불러오는 중...</option>
+        </select>
+        <div class="trend-days-group">
+          <button class="days-btn active" data-days="30">30일</button>
+          <button class="days-btn" data-days="90">90일</button>
+        </div>
+      </div>
+    </div>
+    <div id="trend-chart-wrap" class="trend-chart-wrap">
+      <div class="loading"><div class="spinner"></div> 데이터 로딩 중...</div>
+    </div>
+    <canvas id="trend-chart" style="display:none"></canvas>
+    <p id="trend-empty" class="trend-empty" style="display:none">
+      📭 아직 가격 추세 데이터가 없습니다.<br>
+      <small>매일 오후 6시 이후 데이터가 쌓이기 시작합니다.</small>
+    </p>
   </div>
 
-  <p style="margin-top:12px;font-size:11px;color:#9ca3af;text-align:center">
-    다나와 기준 인기상품 비교 · 실시간 크롤링 데이터 (오전 9시~오후 6시, 1시간 간격 업데이트)
-  </p>
+</div>
+
+<!-- 호버 차트 팝업 -->
+<div id="hover-popup" class="hover-popup" style="display:none">
+  <div class="hover-popup-title" id="hover-popup-title">가격 추세</div>
+  <canvas id="hover-chart" width="320" height="160"></canvas>
+  <div id="hover-no-data" class="hover-no-data" style="display:none">데이터 없음</div>
 </div>
 
 <script src="/static/js/app.js"></script>

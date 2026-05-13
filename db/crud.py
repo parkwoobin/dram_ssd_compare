@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, date as date_type
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, asc
-from db.models import Product, CrawlLog, SourceEnum, CategoryEnum
+from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum
 
 
 async def upsert_products(session: AsyncSession, products: list[dict]):
@@ -73,3 +73,201 @@ async def finish_crawl_log(
     log.item_count = item_count
     log.error_message = error_message
     await session.commit()
+
+
+async def aggregate_daily_prices(
+    session: AsyncSession,
+    target_date: date_type | None = None,
+) -> int:
+    """target_date(KST)의 hourly 데이터를 집계하여 daily_prices에 저장. 저장/갱신 레코드 수 반환."""
+    if target_date is None:
+        target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+
+    # KST day → UTC range
+    day_start_utc = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0) - timedelta(hours=9)
+    day_end_utc = day_start_utc + timedelta(days=1)
+
+    total = 0
+    for source in SourceEnum:
+        for category in CategoryEnum:
+            result = await session.execute(
+                select(
+                    Product.name,
+                    func.avg(Product.price).label("avg_price"),
+                    func.min(Product.price).label("min_price"),
+                    func.max(Product.price).label("max_price"),
+                    func.count(Product.id).label("cnt"),
+                )
+                .where(
+                    Product.source == source,
+                    Product.category == category,
+                    Product.price.isnot(None),
+                    Product.crawled_at >= day_start_utc,
+                    Product.crawled_at < day_end_utc,
+                )
+                .group_by(Product.name)
+            )
+            for row in result.all():
+                existing = await session.execute(
+                    select(DailyPrice).where(
+                        DailyPrice.date == target_date,
+                        DailyPrice.source == source,
+                        DailyPrice.name == row.name,
+                    )
+                )
+                dp = existing.scalar_one_or_none()
+                if dp:
+                    dp.avg_price = row.avg_price
+                    dp.min_price = row.min_price
+                    dp.max_price = row.max_price
+                    dp.crawl_count = row.cnt
+                else:
+                    session.add(DailyPrice(
+                        date=target_date,
+                        source=source,
+                        category=category,
+                        name=row.name,
+                        avg_price=row.avg_price,
+                        min_price=row.min_price,
+                        max_price=row.max_price,
+                        crawl_count=row.cnt,
+                    ))
+                    total += 1
+
+    await session.commit()
+    return total
+
+
+async def _get_today_avg(
+    session: AsyncSession,
+    source: SourceEnum,
+    category: CategoryEnum,
+    name: str,
+    today: date_type,
+) -> float | None:
+    """오늘 Product 테이블에서 실시간 평균 가격 계산 (DailyPrice 미집계 시 대체)."""
+    day_start_utc = datetime(today.year, today.month, today.day, 0, 0, 0) - timedelta(hours=9)
+    day_end_utc = day_start_utc + timedelta(days=1)
+    result = await session.execute(
+        select(func.avg(Product.price))
+        .where(
+            Product.source == source,
+            Product.category == category,
+            Product.name == name,
+            Product.price.isnot(None),
+            Product.crawled_at >= day_start_utc,
+            Product.crawled_at < day_end_utc,
+        )
+    )
+    return result.scalar()
+
+
+async def get_daily_history(
+    session: AsyncSession,
+    category: CategoryEnum,
+    danawa_name: str,
+    smtcom_name: str | None,
+    days: int = 30,
+) -> list[dict]:
+    """일별 평균 가격 기록 반환 (날짜 오름차순). 오늘은 Product 테이블 실시간 집계 포함."""
+    now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
+    today = now_kst.date()
+    cutoff = today - timedelta(days=days)
+    today_str = str(today)
+
+    dw_result = await session.execute(
+        select(DailyPrice.date, DailyPrice.avg_price)
+        .where(
+            DailyPrice.source == SourceEnum.danawa,
+            DailyPrice.category == category,
+            DailyPrice.name == danawa_name,
+            DailyPrice.date >= cutoff,
+        )
+        .order_by(DailyPrice.date)
+    )
+    dw_rows = {str(r.date): r.avg_price for r in dw_result.all()}
+
+    smt_rows: dict = {}
+    if smtcom_name:
+        smt_result = await session.execute(
+            select(DailyPrice.date, DailyPrice.avg_price)
+            .where(
+                DailyPrice.source == SourceEnum.smtcom,
+                DailyPrice.category == category,
+                DailyPrice.name == smtcom_name,
+                DailyPrice.date >= cutoff,
+            )
+            .order_by(DailyPrice.date)
+        )
+        smt_rows = {str(r.date): r.avg_price for r in smt_result.all()}
+
+    # 오늘 DailyPrice 미집계 시 Product 테이블에서 실시간 평균 보완
+    if today_str not in dw_rows:
+        avg = await _get_today_avg(session, SourceEnum.danawa, category, danawa_name, today)
+        if avg is not None:
+            dw_rows[today_str] = avg
+
+    if smtcom_name and today_str not in smt_rows:
+        avg = await _get_today_avg(session, SourceEnum.smtcom, category, smtcom_name, today)
+        if avg is not None:
+            smt_rows[today_str] = avg
+
+    all_dates = sorted(set(dw_rows) | set(smt_rows))
+    return [
+        {
+            "date": d,
+            "danawa_price": dw_rows.get(d),
+            "smtcom_price": smt_rows.get(d),
+        }
+        for d in all_dates
+    ]
+
+
+async def get_trend_products(
+    session: AsyncSession,
+    category: CategoryEnum,
+) -> list[str]:
+    """다나와 최신 크롤 제품명 목록 (추세 드롭다운용)."""
+    subq = (
+        select(func.max(Product.crawled_at))
+        .where(
+            Product.source == SourceEnum.danawa,
+            Product.category == category,
+        )
+        .scalar_subquery()
+    )
+    result = await session.execute(
+        select(Product.name, Product.rank)
+        .where(
+            Product.source == SourceEnum.danawa,
+            Product.category == category,
+            Product.crawled_at == subq,
+        )
+    )
+    rows = result.all()
+    rows_sorted = sorted(rows, key=lambda r: (r.rank is None, r.rank or 9999))
+    return [r.name for r in rows_sorted]
+
+
+async def get_smtcom_product_names(
+    session: AsyncSession,
+    category: CategoryEnum,
+) -> list[str]:
+    """스마트컴 최신 크롤 제품명 목록."""
+    subq = (
+        select(func.max(Product.crawled_at))
+        .where(
+            Product.source == SourceEnum.smtcom,
+            Product.category == category,
+        )
+        .scalar_subquery()
+    )
+    result = await session.execute(
+        select(Product.name)
+        .where(
+            Product.source == SourceEnum.smtcom,
+            Product.category == category,
+            Product.crawled_at == subq,
+        )
+    )
+    return [r[0] for r in result.all()]

@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm update *)",
-      "PowerShell(python --version)"
+      "PowerShell(python --version)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/api/compare/memory?sort=popular\" -UseBasicParsing -TimeoutSec 30; $r.StatusCode; \\($r.Content | ConvertFrom-Json\\).items[0..2] | ConvertTo-Json } catch { $_.Exception.Message })",
+      "PowerShell(Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq \"\" } | Stop-Process -Force; Write-Host \"Server stopped\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8001/api/trend/products?category=ssd\" -UseBasicParsing -TimeoutSec 10; $products = \\($r.Content | ConvertFrom-Json\\).products; $products | Where-Object { $_ -match \"980|990|삼성\" } } catch { $_.Exception.Message })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/api/trend/history?category=memory&danawa_name=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90+DDR5-5600+%2816GB%29&days=30\" -UseBasicParsing -TimeoutSec 10; $r.Content | ConvertFrom-Json | ConvertTo-Json } catch { $_.Exception.Message })"
     ]
   }
 }

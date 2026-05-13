@@ -1,16 +1,60 @@
 import asyncio
-from typing import Literal
+import re
+from typing import Literal, Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from crawler.danawa import crawl as danawa_crawl
 from crawler.smtcom import crawl as smtcom_crawl
-from crawler.matcher import match_products
+from crawler.matcher import match_products, _ddr_gen, _storage_gb
 
 router = APIRouter()
 
 SortKey = Literal["popular", "newest", "price_asc", "price_desc"]
 CategoryKey = Literal["memory", "ssd"]
+
+_ECC_HARD = re.compile(r'\b(RDIMM|LRDIMM|Registered|서버용)\b', re.IGNORECASE)
+
+
+def _is_ecc(name: str) -> bool:
+    if _ECC_HARD.search(name):
+        return True
+    for m in re.finditer(r'ECC', name, re.IGNORECASE):
+        before = name[max(0, m.start() - 3):m.start()]
+        if '온다이' not in before:
+            return True
+    return False
+
+
+def _filter_products(
+    products: list[dict],
+    ddr: Optional[str],
+    ecc_exclude: bool,
+    capacity_gb: Optional[int],
+    ddr45_only: bool = False,
+) -> list[dict]:
+    out = []
+    for p in products:
+        name = p["name"]
+        gen = _ddr_gen(name)
+
+        # 메모리는 항상 DDR4/DDR5만 표시 (DDR3 이하 제외)
+        if ddr45_only and gen is not None and gen not in (4, 5):
+            continue
+
+        # DDR 세대 필터 (명시적 선택 시)
+        if ddr:
+            if gen is not None and gen != int(ddr):
+                continue
+
+        if ecc_exclude and _is_ecc(name):
+            continue
+        if capacity_gb is not None:
+            cap = _storage_gb(name)
+            if cap is not None and cap != capacity_gb:
+                continue
+        out.append(p)
+    return out
 
 
 class PriceItem(BaseModel):
@@ -19,7 +63,7 @@ class PriceItem(BaseModel):
     danawa_rank: int | None
     smtcom_name: str | None
     smtcom_price: int | None
-    price_diff: int | None       # smtcom - danawa (양수=스마트컴 비쌈, 음수=스마트컴 저렴)
+    price_diff: int | None
     match_score: float
 
 
@@ -58,14 +102,10 @@ def _to_response(category: str, sort: str, matched_list: list[dict]) -> CompareR
             )
         )
 
-    # 정렬 재적용 (smtcom 가격 기준 정렬)
     if sort == "price_asc":
         items.sort(key=lambda x: (x.smtcom_price is None, x.smtcom_price or 0))
     elif sort == "price_desc":
         items.sort(key=lambda x: (x.smtcom_price is None, -(x.smtcom_price or 0)))
-    elif sort == "newest":
-        pass  # 신상품순은 danawa 기준 순서 유지
-    # popular: danawa rank 순서 유지
 
     return CompareResponse(
         category=category,
@@ -79,11 +119,22 @@ def _to_response(category: str, sort: str, matched_list: list[dict]) -> CompareR
 @router.get("/compare/{category}", response_model=CompareResponse)
 async def compare_prices(
     category: CategoryKey,
-    sort: SortKey = Query("popular", description="정렬: popular/newest/price_asc/price_desc"),
+    sort: SortKey = Query("popular"),
+    ddr: Optional[Literal["4", "5"]] = Query(None, description="DDR 세대 필터 (memory 전용)"),
+    ecc_exclude: bool = Query(False, description="ECC 제품 제외 (memory 전용)"),
+    capacity_gb: Optional[int] = Query(None, description="SSD 용량 필터(GB): 256/512/1024/2048/4096"),
 ):
     dw_products, smt_products = await asyncio.gather(
         danawa_crawl(category, sort),
         smtcom_crawl(category, sort),
     )
-    matched = match_products(dw_products, smt_products)
+
+    if category == "memory":
+        dw_products = _filter_products(dw_products, ddr, ecc_exclude, None, ddr45_only=True)
+        smt_products = _filter_products(smt_products, ddr, ecc_exclude, None, ddr45_only=True)
+    elif category == "ssd":
+        dw_products = _filter_products(dw_products, None, False, capacity_gb)
+        smt_products = _filter_products(smt_products, None, False, capacity_gb)
+
+    matched = match_products(dw_products, smt_products, category=category)
     return _to_response(category, sort, matched)

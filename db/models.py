@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, Index
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, Index, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase
 import enum
 
@@ -31,6 +31,25 @@ class Product(Base):
 
     __table_args__ = (
         Index("ix_source_category_crawled", "source", "category", "crawled_at"),
+    )
+
+
+class DailyPrice(Base):
+    __tablename__ = "daily_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column(Date, nullable=False)
+    source = Column(Enum(SourceEnum), nullable=False)
+    category = Column(Enum(CategoryEnum), nullable=False)
+    name = Column(String, nullable=False)
+    avg_price = Column(Float, nullable=True)
+    min_price = Column(Integer, nullable=True)
+    max_price = Column(Integer, nullable=True)
+    crawl_count = Column(Integer, default=0)
+
+    __table_args__ = (
+        UniqueConstraint("date", "source", "name", name="uq_daily_price"),
+        Index("ix_daily_prices_date_cat", "date", "category"),
     )
 
 

@@ -10,7 +10,7 @@ from crawler.danawa import crawl as danawa_crawl, CATEGORIES as DANAWA_CATS
 from crawler.smtcom import crawl as smtcom_crawl
 from db.database import AsyncSessionLocal
 from db.models import SourceEnum, CategoryEnum
-from db.crud import upsert_products, create_crawl_log, finish_crawl_log
+from db.crud import upsert_products, create_crawl_log, finish_crawl_log, aggregate_daily_prices
 
 logger = logging.getLogger(__name__)
 
@@ -54,20 +54,31 @@ async def _run_crawl(source: SourceEnum, category: str):
             await finish_crawl_log(session, log.id, "failed", error_message=str(e))
 
 
-async def crawl_all():
-    """다나와·스마트컴 메모리·SSD 전체 크롤링"""
+async def crawl_all(force: bool = False):
+    """다나와·스마트컴 메모리·SSD 전체 크롤링. force=True 이면 시간 제한 무시."""
     hour = datetime.now().hour
-    if not (CRAWL_START_HOUR <= hour < CRAWL_END_HOUR):
+    if not force and not (CRAWL_START_HOUR <= hour < CRAWL_END_HOUR):
         logger.debug("크롤링 시간 외 (%d시)", hour)
         return
 
-    logger.info("크롤링 시작 (%d시)", hour)
+    logger.info("크롤링 시작 (%d시)%s", hour, " [초기 강제]" if force else "")
     tasks = []
     for category in ("memory", "ssd"):
         tasks.append(_run_crawl(SourceEnum.danawa, category))
         tasks.append(_run_crawl(SourceEnum.smtcom, category))
     await asyncio.gather(*tasks, return_exceptions=True)
     logger.info("크롤링 완료")
+
+
+async def aggregate_daily():
+    """18:01에 하루치 가격 데이터 집계."""
+    logger.info("일별 가격 집계 시작")
+    try:
+        async with AsyncSessionLocal() as session:
+            count = await aggregate_daily_prices(session)
+        logger.info("일별 가격 집계 완료: %d개 레코드", count)
+    except Exception as e:
+        logger.error("일별 가격 집계 실패: %s", e)
 
 
 def create_scheduler() -> AsyncIOScheduler:
@@ -80,6 +91,13 @@ def create_scheduler() -> AsyncIOScheduler:
             timezone="Asia/Seoul",
         ),
         id="crawl_all",
+        replace_existing=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        aggregate_daily,
+        CronTrigger(hour=CRAWL_END_HOUR, minute="1", timezone="Asia/Seoul"),
+        id="aggregate_daily",
         replace_existing=True,
         max_instances=1,
     )

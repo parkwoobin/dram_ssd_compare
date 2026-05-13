@@ -13,6 +13,51 @@ MATCH_THRESHOLD = 82  # 용량·브랜드 필터 통과 후 최종 임계값
 
 _STORAGE_RE = re.compile(r"(\d+)\s*(GB|TB)", re.IGNORECASE)  # 저장 용량 추출
 
+# SSD 모델 번호 / 시리즈 추출 (다른 시리즈 간 매칭 방지)
+_SSD_MODEL_RE = re.compile(
+    r"\b("
+    r"WD\s*(?:BLACK|BLUE|GREEN|RED|PURPLE|GOLD)"  # WD 컬러 라인 (우선 매칭)
+    r"|SN\d{3,}[A-Z0-9]*"                          # WD NVMe 모델: SN850X, SN5000, SN8100
+    r"|SA\d{3,}"                                    # WD SATA: SA510
+    r"|\d{3,4}\s*(?:PRO|EVO(?:\s*(?:Plus|PLUS))?)" # Samsung 숫자+등급: 990 PRO, 870 EVO
+    r"|(?<!\w)(?:980|990|870|880|860|850|970|9100)(?!\s*(?:PRO|EVO|Plus))\b"  # Samsung 단독
+    r"|P[3-6]\d\b"                                  # SK Hynix: P31, P41, P51, P61
+    r"|PM\d+[A-Z]\d\b"                              # Samsung OEM: PM9A1, PM9C1
+    r"|C\d{3,}[A-Z0-9]*\b"                         # KLEVV: C910G, C715, C930
+    r"|EXCERIA(?:\s+(?:PRO|PLUS|G\d))?"             # Kioxia: EXCERIA PRO G2, EXCERIA PLUS
+    r"|AORUS(?:\s+Gen\d)?"                          # GIGABYTE AORUS 시리즈
+    r"|Gen\d\s+\d{4}"                              # GIGABYTE Gen4 7300, Gen3 3500 등
+    r"|SPATIUM\s+M\d{3}"                           # MSI SPATIUM M480, M560
+    r"|FIRECUDA|BARRACUDA|IRONWOLF"                # Seagate 라인업
+    r"|[TX]\d{3,}\b"                               # Crucial: T500, T700
+    r"|P\d{3,}\b"                                  # Crucial P310, P510 (P2자리는 SK Hynix)
+    r"|NV\d\b"                                     # Kingston: NV3
+    r"|LEGEND\s+\d{3,}"                            # ADATA LEGEND 900, 960, 710
+    r"|GAMMIX\s+S\d+"                              # ADATA XPG GAMMIX S70
+    r"|SX\d{4}"                                    # ADATA XPG SX8200
+    r")",
+    re.IGNORECASE,
+)
+
+
+_WD_COLOR_KEYS = frozenset({"wdblack", "wdblue", "wdgreen", "wdred", "wdpurple", "wdgold"})
+
+
+def _ssd_model_keys(name: str) -> set[str]:
+    """SSD 모델 식별자 집합 반환. 교집합이 없으면 다른 시리즈 → 매칭 거부."""
+    return {re.sub(r"\s+", "", m.group(0).lower()) for m in _SSD_MODEL_RE.finditer(name)}
+
+
+def _ssd_strong_keys(name: str) -> set[str]:
+    """WD 컬러 라인 제외 — 실제 모델 번호만 반환 (SN850X ≠ SN850P 구분 등)."""
+    return _ssd_model_keys(name) - _WD_COLOR_KEYS
+
+
+def _ssd_model(name: str) -> str | None:
+    """단일 모델 번호 반환 (하위 호환)."""
+    keys = _ssd_model_keys(name)
+    return next(iter(keys)) if keys else None
+
 # 브랜드 키워드 → 정규화 이름 매핑 (부분 일치)
 _BRAND_MAP: dict[str, str] = {
     "삼성": "samsung", "samsung": "samsung",
@@ -22,7 +67,7 @@ _BRAND_MAP: dict[str, str] = {
     "teamgroup": "teamgroup", "팀그룹": "teamgroup",
     "gskill": "gskill", "g.skill": "gskill",
     "corsair": "corsair", "벤전스": "corsair",
-    "kingston": "kingston", "hyperx": "kingston",
+    "kingston": "kingston", "킹스톤": "kingston", "hyperx": "kingston",
     "patriot": "patriot",
     "adata": "adata",
     "geil": "geil",
@@ -30,10 +75,20 @@ _BRAND_MAP: dict[str, str] = {
     "agi": "agi",
     "oloy": "oloy",
     "타무즈": "tammuz", "tammuz": "tammuz",
-    "hiksemi": "hiksemi",
+    "hiksemi": "hiksemi", "hikvision": "hiksemi",
     "western": "wd", "wd": "wd",
     "seagate": "seagate",
     "키오시아": "kioxia", "kioxia": "kioxia",
+    "biwin": "biwin",
+    "컴이지": "comeasy", "comeasy": "comeasy",
+    "화이트스톤": "whitestone",
+    "실리콘파워": "siliconpower", "silicon power": "siliconpower",
+    "넥스트": "next",
+    "타무즈": "tammuz",
+    "마이크로닉스": "micronics", "micronics": "micronics",
+    "gigabyte": "gigabyte", "기가바이트": "gigabyte",
+    "화웨이": "huawei", "huawei": "huawei",
+    "파이슨": "phison", "phison": "phison",
 }
 _CAPACITY_RE = re.compile(
     r"\b(\d+\s*(?:GB|TB|MHz|CL\d+|DDR[45]?[-]?\d*|NVMe|M\.2|SATA))\b",
@@ -93,6 +148,7 @@ def _storage_gb(name: str) -> int | None:
 def match_products(
     danawa_products: list[dict],
     smtcom_products: list[dict],
+    category: str = "memory",
 ) -> list[dict]:
     """
     danawa_products 순서를 유지하면서 각 다나와 제품에 최적의 스마트컴 제품 매칭.
@@ -112,6 +168,9 @@ def match_products(
     smt_caps = [_storage_gb(n) for n in smt_names]
     smt_brands = [_extract_brand(n) for n in smt_names]
     smt_ddrs = [_ddr_gen(n) for n in smt_names]
+    is_ssd = category == "ssd"
+    smt_model_keys_list = [_ssd_model_keys(n) for n in smt_names] if is_ssd else [set()] * len(smt_names)
+    smt_strong_keys_list = [_ssd_strong_keys(n) for n in smt_names] if is_ssd else [set()] * len(smt_names)
 
     results = []
     for dw in danawa_products:
@@ -119,6 +178,8 @@ def match_products(
         dw_cap = _storage_gb(dw["name"])
         dw_brand = _extract_brand(dw["name"])
         dw_ddr = _ddr_gen(dw["name"])
+        dw_model_keys = _ssd_model_keys(dw["name"]) if is_ssd else set()
+        dw_strong_keys = _ssd_strong_keys(dw["name"]) if is_ssd else set()
 
         best_score = 0.0
         best_idx = -1
@@ -133,7 +194,22 @@ def match_products(
             # DDR 세대가 양쪽 모두 식별된 경우 반드시 일치해야 함
             if dw_ddr and smt_ddrs[i] and dw_ddr != smt_ddrs[i]:
                 continue
+            # SSD: 모델 키 집합 교집합이 없으면 다른 시리즈 → 매칭 거부
+            if is_ssd and dw_model_keys and smt_model_keys_list[i] and not (dw_model_keys & smt_model_keys_list[i]):
+                continue
+            # SSD: 실제 모델 번호(WD 컬러라인 제외)가 양쪽 모두 있는데 다르면 → 매칭 거부 (SN850P ≠ SN850X)
+            if is_ssd and dw_strong_keys and smt_strong_keys_list[i] and not (dw_strong_keys & smt_strong_keys_list[i]):
+                continue
             score = fuzz.WRatio(dw_norm, smt_norm)
+            effective_threshold = MATCH_THRESHOLD
+            # 다나와 브랜드가 식별되는데 스마트컴 브랜드가 불명이면 높은 임계값 요구
+            if dw_brand and not smt_brands[i]:
+                effective_threshold = max(effective_threshold, 93)
+            # 스마트컴 제품은 특정 모델인데 다나와 제품이 generic이면 높은 임계값 요구
+            if is_ssd and smt_model_keys_list[i] and not dw_model_keys:
+                effective_threshold = max(effective_threshold, 95)
+            if score < effective_threshold:
+                continue
             if score > best_score:
                 best_score = score
                 best_idx = i

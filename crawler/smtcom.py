@@ -6,7 +6,7 @@ import httpx
 
 SMTCOM_BASE = (
     "https://www.smtcom.co.kr/skin/shop/basic/estimate_search_new2.php"
-    "?depth=2&cate1=17&cate2={cate2}&cate3=&cate4=&list_num=100&sort={sort}"
+    "?depth=2&cate1=17&cate2={cate2}&cate3=&cate4=&list_num=9999&sort={sort}"
 )
 
 HEADERS = {
