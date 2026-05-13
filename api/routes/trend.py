@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db
 from db.models import CategoryEnum
-from db.crud import get_trend_products, get_daily_history, get_smtcom_product_names
+from db.crud import get_trend_products, get_daily_history, get_saved_daily_history, get_smtcom_product_names
 from crawler.matcher import _normalize, _storage_gb, _extract_brand, _ddr_gen, MATCH_THRESHOLD
 from rapidfuzz import fuzz
 
@@ -84,6 +84,67 @@ async def trend_history(
     return TrendHistoryResponse(
         danawa_name=danawa_name,
         smtcom_name=resolved_smtcom,
+        history=history,
+        category=category,
+    )
+
+
+@router.get("/trend/daily-history", response_model=TrendHistoryResponse)
+async def trend_daily_history(
+    category: Literal["memory", "ssd"] = Query(...),
+    danawa_name: str = Query(...),
+    smtcom_name: Optional[str] = Query(None),
+    days: int = Query(30, ge=7, le=365),
+    db: AsyncSession = Depends(get_db),
+):
+    cat = CategoryEnum(category)
+
+    resolved_smtcom = smtcom_name
+    if not resolved_smtcom:
+        smt_names = await get_smtcom_product_names(db, cat)
+        resolved_smtcom = _find_best_smtcom(danawa_name, smt_names)
+
+    # 저장된 데이터 + 오늘 실시간 데이터 포함
+    history_rows = await get_daily_history(db, cat, danawa_name, resolved_smtcom, days)
+    history = [TrendPoint(**r) for r in history_rows]
+
+    return TrendHistoryResponse(
+        danawa_name=danawa_name,
+        smtcom_name=resolved_smtcom,
+        history=history,
+        category=category,
+    )
+
+
+@router.get("/trend/test-debug", response_model=TrendHistoryResponse)
+async def trend_test_debug(
+    category: Literal["memory", "ssd"] = Query("memory"),
+):
+    """디버그용 테스트 데이터 - 차트 미리보기용"""
+    from datetime import datetime, timedelta
+    
+    base_date = datetime.now().date() - timedelta(days=29)
+    history = []
+    
+    for i in range(30):
+        current_date = base_date + timedelta(days=i)
+        # 가격 변동 시뮬레이션 (삼각파)
+        danawa_price = 350000 - int(5000 * (1 - (i / 30))) + int(10000 * abs((i % 10) - 5) / 5)
+        smtcom_price = danawa_price - 5000 + int(3000 * (i % 5))
+        
+        history.append(
+            TrendPoint(
+                date=str(current_date),
+                danawa_price=danawa_price if danawa_price > 0 else None,
+                smtcom_price=smtcom_price if smtcom_price > 0 else None,
+            )
+        )
+    
+    product_name = "삼성전자 DDR5-5600 (16GB)" if category == "memory" else "삼성 990 PRO (1TB)"
+    
+    return TrendHistoryResponse(
+        danawa_name=product_name,
+        smtcom_name="삼성전자 DDR5-5600 (16GB) PC5-44800" if category == "memory" else "삼성 990 PRO NVMe 1TB",
         history=history,
         category=category,
     )

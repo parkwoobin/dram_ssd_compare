@@ -25,7 +25,7 @@ async def get_latest_products(
             Product.source == source,
             Product.category == category,
             Product.crawled_at == subq,
-        )
+        ).order_by(Product.rank.asc().nullslast(), Product.id.asc())
     )
     return result.scalars().all()
 
@@ -211,6 +211,55 @@ async def get_daily_history(
         avg = await _get_today_avg(session, SourceEnum.smtcom, category, smtcom_name, today)
         if avg is not None:
             smt_rows[today_str] = avg
+
+    all_dates = sorted(set(dw_rows) | set(smt_rows))
+    return [
+        {
+            "date": d,
+            "danawa_price": dw_rows.get(d),
+            "smtcom_price": smt_rows.get(d),
+        }
+        for d in all_dates
+    ]
+
+
+async def get_saved_daily_history(
+    session: AsyncSession,
+    category: CategoryEnum,
+    danawa_name: str,
+    smtcom_name: str | None,
+    days: int = 30,
+) -> list[dict]:
+    """daily_prices에 저장된 일별 평균 가격만 반환 (실시간 fallback 없음)."""
+    now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
+    today = now_kst.date()
+    cutoff = today - timedelta(days=days)
+
+    dw_result = await session.execute(
+        select(DailyPrice.date, DailyPrice.avg_price)
+        .where(
+            DailyPrice.source == SourceEnum.danawa,
+            DailyPrice.category == category,
+            DailyPrice.name == danawa_name,
+            DailyPrice.date >= cutoff,
+        )
+        .order_by(DailyPrice.date)
+    )
+    dw_rows = {str(r.date): r.avg_price for r in dw_result.all()}
+
+    smt_rows: dict = {}
+    if smtcom_name:
+        smt_result = await session.execute(
+            select(DailyPrice.date, DailyPrice.avg_price)
+            .where(
+                DailyPrice.source == SourceEnum.smtcom,
+                DailyPrice.category == category,
+                DailyPrice.name == smtcom_name,
+                DailyPrice.date >= cutoff,
+            )
+            .order_by(DailyPrice.date)
+        )
+        smt_rows = {str(r.date): r.avg_price for r in smt_result.all()}
 
     all_dates = sorted(set(dw_rows) | set(smt_rows))
     return [

@@ -35,7 +35,10 @@ SORT_KEYS = {
     "price_desc": "GOODSINFO_CASH_PRICE_DESC",
 }
 
-PAGES_TO_FETCH = 2  # 페이지당 ~30개, 총 ~60개 제품
+PAGES_TO_FETCH = {
+    "memory": 14,  # 페이지당 ~30개, 총 ~420개 — 24GB 단품 포함 전 용량 커버 (병렬 요청)
+    "ssd": 2,      # 총 ~63개 제품
+}
 
 
 def _parse_price(text: str) -> int | None:
@@ -84,24 +87,24 @@ def _parse_page(html: str, base_rank: int) -> list[dict]:
 async def crawl(category: str, sort: str = "popular") -> list[dict]:
     cat_seq = CATEGORIES[category]
     orderby = SORT_KEYS.get(sort, SORT_KEYS["popular"])
-    all_products: list[dict] = []
+    pages = PAGES_TO_FETCH.get(category, 2)
 
     async with httpx.AsyncClient(headers=HEADERS, timeout=30, follow_redirects=True) as client:
-        for page in range(1, PAGES_TO_FETCH + 1):
+        async def _fetch(page: int) -> list[dict]:
             url = DANAWA_BASE.format(cat_seq=cat_seq, orderby=orderby, page=page)
             try:
                 resp = await client.get(url)
                 resp.raise_for_status()
-                base_rank = (page - 1) * 30 + 1
-                products = _parse_page(resp.text, base_rank)
-                if not products:
-                    break
-                all_products.extend(products)
-                await asyncio.sleep(0.5)
+                return _parse_page(resp.text, (page - 1) * 30 + 1)
             except Exception as e:
                 print(f"[Danawa] 크롤링 오류 page={page}: {e}")
-                break
+                return []
 
+        results = await asyncio.gather(*[_fetch(p) for p in range(1, pages + 1)])
+
+    all_products: list[dict] = []
+    for page_products in results:
+        all_products.extend(page_products)
     return all_products
 
 

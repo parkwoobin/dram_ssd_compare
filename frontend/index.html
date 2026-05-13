@@ -21,7 +21,7 @@
   <!-- 카테고리 탭 -->
   <div class="tabs">
     <button class="tab-btn active" data-cat="memory">💾 메모리 (RAM)</button>
-    <button class="tab-btn" data-cat="ssd">💿 SSD</button>
+    <button class="tab-btn" data-cat="ssd">⚡ SSD</button>
     <button class="tab-btn" data-cat="trend">📈 가격 추세</button>
   </div>
 
@@ -48,6 +48,21 @@
         <button class="filter-btn active" data-ddr="">전체</button>
         <button class="filter-btn" data-ddr="4">DDR4만</button>
         <button class="filter-btn" data-ddr="5">DDR5만</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">용량:</span>
+        <button class="filter-btn active" data-mem-cap="">전체</button>
+        <button class="filter-btn" data-mem-cap="4">4GB</button>
+        <button class="filter-btn" data-mem-cap="8">8GB</button>
+        <button class="filter-btn" data-mem-cap="16">16GB</button>
+        <button class="filter-btn" data-mem-cap="32">32GB</button>
+        <button class="filter-btn" data-mem-cap="64">64GB</button>
+        <button class="filter-btn" data-mem-cap="128">128GB</button>
+        <button class="filter-btn" data-mem-cap="256">256GB</button>
+        <span class="filter-sep">│</span>
+        <button class="filter-btn" data-mem-cap="24">24GB</button>
+        <button class="filter-btn" data-mem-cap="48">48GB</button>
+        <button class="filter-btn" data-mem-cap="96">96GB</button>
       </div>
       <label class="toggle-label">
         <input type="checkbox" id="ecc-exclude" />
@@ -102,7 +117,7 @@
     <div class="trend-header">
       <div class="trend-cat-tabs">
         <button class="trend-cat-btn active" data-tcat="memory">💾 메모리</button>
-        <button class="trend-cat-btn" data-tcat="ssd">💿 SSD</button>
+        <button class="trend-cat-btn" data-tcat="ssd">⚡ SSD</button>
       </div>
       <div class="trend-controls">
         <select id="trend-product-select" class="trend-select">

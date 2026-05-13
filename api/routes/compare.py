@@ -1,11 +1,12 @@
-import asyncio
 import re
 from typing import Literal, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from crawler.danawa import crawl as danawa_crawl
-from crawler.smtcom import crawl as smtcom_crawl
+from db.database import get_db
+from db.models import CategoryEnum, SourceEnum
+from db.crud import get_latest_products
 from crawler.matcher import match_products, _ddr_gen, _storage_gb
 
 router = APIRouter()
@@ -102,7 +103,14 @@ def _to_response(category: str, sort: str, matched_list: list[dict]) -> CompareR
             )
         )
 
-    if sort == "price_asc":
+    # 정렬 적용
+    if sort == "popular":
+        # 다나와 인기상품순 (rank 기준)
+        items.sort(key=lambda x: (x.danawa_rank is None, x.danawa_rank or float('inf')))
+    elif sort == "newest":
+        # 다나와 신상품순 (현재 일반상품과 동일하게 유지)
+        pass
+    elif sort == "price_asc":
         items.sort(key=lambda x: (x.smtcom_price is None, x.smtcom_price or 0))
     elif sort == "price_desc":
         items.sort(key=lambda x: (x.smtcom_price is None, -(x.smtcom_price or 0)))
@@ -123,15 +131,32 @@ async def compare_prices(
     ddr: Optional[Literal["4", "5"]] = Query(None, description="DDR 세대 필터 (memory 전용)"),
     ecc_exclude: bool = Query(False, description="ECC 제품 제외 (memory 전용)"),
     capacity_gb: Optional[int] = Query(None, description="SSD 용량 필터(GB): 256/512/1024/2048/4096"),
+    db: AsyncSession = Depends(get_db),
 ):
-    dw_products, smt_products = await asyncio.gather(
-        danawa_crawl(category, sort),
-        smtcom_crawl(category, sort),
-    )
+    cat = CategoryEnum(category)
+    dw_rows = await get_latest_products(db, cat, SourceEnum.danawa)
+    smt_rows = await get_latest_products(db, cat, SourceEnum.smtcom)
+
+    dw_products = [
+        {
+            "name": row.name,
+            "price": row.price,
+            "rank": row.rank,
+        }
+        for row in dw_rows
+    ]
+    smt_products = [
+        {
+            "name": row.name,
+            "price": row.price,
+            "rank": row.rank,
+        }
+        for row in smt_rows
+    ]
 
     if category == "memory":
-        dw_products = _filter_products(dw_products, ddr, ecc_exclude, None, ddr45_only=True)
-        smt_products = _filter_products(smt_products, ddr, ecc_exclude, None, ddr45_only=True)
+        dw_products = _filter_products(dw_products, ddr, ecc_exclude, capacity_gb, ddr45_only=True)
+        smt_products = _filter_products(smt_products, ddr, ecc_exclude, capacity_gb, ddr45_only=True)
     elif category == "ssd":
         dw_products = _filter_products(dw_products, None, False, capacity_gb)
         smt_products = _filter_products(smt_products, None, False, capacity_gb)

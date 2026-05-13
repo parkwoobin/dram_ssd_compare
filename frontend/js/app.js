@@ -6,6 +6,7 @@ const state = {
   ddr: '',
   eccExclude: false,
   capacityGb: '',
+  memCapGb: '',
   trendCategory: 'memory',
   trendDays: 30,
   loading: false,
@@ -84,7 +85,7 @@ function renderTable(items) {
   `;
 
   el.tableBody.innerHTML = filtered.map((item, idx) => {
-    const rank = item.danawa_rank ?? (idx + 1);
+    const rank = idx + 1;
     const smtName = item.smtcom_name
       ? `<div class="product-name">${item.smtcom_name}</div>`
       : `<span class="no-match">스마트컴 미취급</span>`;
@@ -130,6 +131,7 @@ function buildCompareUrl() {
   if (state.category === 'memory') {
     if (state.ddr) params.set('ddr', state.ddr);
     if (state.eccExclude) params.set('ecc_exclude', 'true');
+    if (state.memCapGb) params.set('capacity_gb', state.memCapGb);
   } else if (state.category === 'ssd') {
     if (state.capacityGb) params.set('capacity_gb', state.capacityGb);
   }
@@ -191,7 +193,7 @@ el.hoverPopup.addEventListener('mouseleave', () => {
 
 function positionPopup(mouseEvent) {
   const pad = 16;
-  const pw = 360, ph = 220;
+  const pw = 320, ph = 220;
   let x = mouseEvent.clientX + pad;
   let y = mouseEvent.clientY + pad;
   if (x + pw > window.innerWidth) x = mouseEvent.clientX - pw - pad;
@@ -213,7 +215,7 @@ async function showHoverPopup(mouseEvent, dname, sname) {
   try {
     const params = new URLSearchParams({ category: state.category, danawa_name: dname, days: 30 });
     if (sname) params.set('smtcom_name', sname);
-    const res = await fetch(`/api/trend/history?${params}`, { signal: hoverFetchController.signal });
+    const res = await fetch(`/api/trend/daily-history?${params}`, { signal: hoverFetchController.signal });
     if (!res.ok) throw new Error('fetch error');
     const data = await res.json();
 
@@ -249,6 +251,7 @@ function renderHoverChart(history) {
           backgroundColor: 'rgba(37,99,235,0.08)',
           tension: 0.3,
           pointRadius: 2,
+          pointStyle: 'square',
           spanGaps: true,
         },
         {
@@ -258,6 +261,7 @@ function renderHoverChart(history) {
           backgroundColor: 'rgba(220,38,38,0.08)',
           tension: 0.3,
           pointRadius: 2,
+          pointStyle: 'square',
           spanGaps: true,
         },
       ],
@@ -266,8 +270,10 @@ function renderHoverChart(history) {
       animation: false,
       responsive: false,
       plugins: {
-        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
+        legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12 } },
         tooltip: {
+          titleFont: { size: 12 },
+          bodyFont: { size: 12 },
           callbacks: {
             label: ctx => ctx.dataset.label + ': ' + (ctx.raw != null ? Number(ctx.raw).toLocaleString('ko-KR') + '원' : '-'),
           },
@@ -276,11 +282,11 @@ function renderHoverChart(history) {
       scales: {
         y: {
           ticks: {
-            font: { size: 10 },
+            font: { size: 11 },
             callback: v => (v / 10000).toFixed(0) + '만',
           },
         },
-        x: { ticks: { font: { size: 10 }, maxTicksLimit: 8 } },
+        x: { ticks: { font: { size: 11 }, maxTicksLimit: 8 } },
       },
     },
   });
@@ -315,7 +321,12 @@ async function loadTrendProducts() {
     if (defaultName) {
       el.trendSelect.value = encodeURIComponent(defaultName);
     }
-    loadTrendHistory();
+    
+    // 데이터가 없으면 테스트 데이터 로드
+    await loadTrendHistory();
+    if (el.trendEmpty.style.display !== 'none' || el.trendCanvas.style.display === 'none') {
+      await loadTrendHistoryDebug();
+    }
   } catch (e) {
     el.trendSelect.innerHTML = '<option value="">불러오기 실패</option>';
   }
@@ -337,7 +348,7 @@ async function loadTrendHistory() {
       danawa_name: dname,
       days: state.trendDays,
     });
-    const res = await fetch(`/api/trend/history?${params}`);
+    const res = await fetch(`/api/trend/daily-history?${params}`);
     const data = await res.json();
 
     el.trendChartWrap.style.display = 'none';
@@ -351,6 +362,31 @@ async function loadTrendHistory() {
     renderTrendChart(data);
   } catch (e) {
     el.trendChartWrap.innerHTML = `<div class="error-msg">⚠️ 로드 실패: ${e.message}</div>`;
+  }
+}
+
+async function loadTrendHistoryDebug() {
+  // 테스트 데이터 로드
+  el.trendChartWrap.style.display = 'flex';
+  el.trendChartWrap.innerHTML = '<div class="loading"><div class="spinner"></div> 테스트 데이터 로딩...</div>';
+  el.trendCanvas.style.display = 'none';
+  el.trendEmpty.style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/trend/test-debug?category=${state.trendCategory}`);
+    const data = await res.json();
+
+    el.trendChartWrap.style.display = 'none';
+
+    if (!data.history || data.history.length === 0) {
+      el.trendEmpty.style.display = 'block';
+      return;
+    }
+
+    el.trendCanvas.style.display = 'block';
+    renderTrendChart(data);
+  } catch (e) {
+    console.log('테스트 데이터 로딩 실패:', e);
   }
 }
 
@@ -377,6 +413,7 @@ function renderTrendChart(data) {
           backgroundColor: 'rgba(37,99,235,0.1)',
           tension: 0.3,
           pointRadius: 4,
+          pointStyle: 'square',
           fill: false,
           spanGaps: true,
         },
@@ -387,6 +424,7 @@ function renderTrendChart(data) {
           backgroundColor: 'rgba(220,38,38,0.1)',
           tension: 0.3,
           pointRadius: 4,
+          pointStyle: 'square',
           fill: false,
           spanGaps: true,
         },
@@ -396,8 +434,20 @@ function renderTrendChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top' },
+        legend: {
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'rect',
+            pointStyleWidth: 12,
+            boxWidth: 12,
+            boxHeight: 12,
+            font: { size: 13 },
+          },
+        },
         tooltip: {
+          titleFont: { size: 13 },
+          bodyFont: { size: 13 },
           callbacks: {
             label: ctx => ctx.dataset.label + ': ' + (ctx.raw != null ? Number(ctx.raw).toLocaleString('ko-KR') + '원' : '데이터 없음'),
           },
@@ -406,11 +456,12 @@ function renderTrendChart(data) {
       scales: {
         y: {
           ticks: {
+            font: { size: 12 },
             callback: v => Number(v).toLocaleString('ko-KR') + '원',
           },
         },
         x: {
-          ticks: { maxTicksLimit: 12 },
+          ticks: { font: { size: 12 }, maxTicksLimit: 12 },
         },
       },
     },
@@ -445,6 +496,11 @@ el.tabBtns.forEach(btn => {
       showTrend();
     } else {
       state.category = cat;
+      // 카테고리 전환 시 용량 필터 초기화
+      state.memCapGb = '';
+      state.capacityGb = '';
+      document.querySelectorAll('[data-mem-cap]').forEach(b => b.classList.toggle('active', b.dataset.memCap === ''));
+      document.querySelectorAll('[data-cap]').forEach(b => b.classList.toggle('active', b.dataset.cap === ''));
       showCompare(cat);
       fetchAndRender();
     }
@@ -489,6 +545,16 @@ document.querySelectorAll('[data-cap]').forEach(btn => {
   });
 });
 
+// RAM capacity filter buttons
+document.querySelectorAll('[data-mem-cap]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.memCapGb = btn.dataset.memCap;
+    document.querySelectorAll('[data-mem-cap]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    fetchAndRender();
+  });
+});
+
 // Trend category sub-tabs
 el.trendCatBtns.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -512,4 +578,7 @@ document.querySelectorAll('.days-btn').forEach(btn => {
 });
 
 // ── Init ──────────────────────────────────────────────────────
+// Prevent Enter key from accidentally activating first button: ensure buttons are non-submit
+document.querySelectorAll('button').forEach(b => b.setAttribute('type', 'button'));
+
 fetchAndRender();

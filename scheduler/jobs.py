@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -70,15 +70,19 @@ async def crawl_all(force: bool = False):
     logger.info("크롤링 완료")
 
 
-async def aggregate_daily():
-    """18:01에 하루치 가격 데이터 집계."""
+async def aggregate_daily(target_date=None):
+    """하루치 가격 데이터 집계. 기본값은 KST 기준 전날."""
     logger.info("일별 가격 집계 시작")
     try:
+        if target_date is None:
+            target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date() - timedelta(days=1)
         async with AsyncSessionLocal() as session:
-            count = await aggregate_daily_prices(session)
+            count = await aggregate_daily_prices(session, target_date=target_date)
         logger.info("일별 가격 집계 완료: %d개 레코드", count)
+        return count
     except Exception as e:
         logger.error("일별 가격 집계 실패: %s", e)
+        return 0
 
 
 def create_scheduler() -> AsyncIOScheduler:
@@ -86,7 +90,7 @@ def create_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(
         crawl_all,
         CronTrigger(
-            hour=f"{CRAWL_START_HOUR}-{CRAWL_END_HOUR - 1}",
+            hour="*",
             minute="0",
             timezone="Asia/Seoul",
         ),
@@ -96,7 +100,7 @@ def create_scheduler() -> AsyncIOScheduler:
     )
     scheduler.add_job(
         aggregate_daily,
-        CronTrigger(hour=CRAWL_END_HOUR, minute="1", timezone="Asia/Seoul"),
+        CronTrigger(hour=18, minute="5", timezone="Asia/Seoul"),
         id="aggregate_daily",
         replace_existing=True,
         max_instances=1,

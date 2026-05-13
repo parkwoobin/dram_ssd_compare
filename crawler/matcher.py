@@ -58,6 +58,13 @@ def _ssd_model(name: str) -> str | None:
     keys = _ssd_model_keys(name)
     return next(iter(keys)) if keys else None
 
+
+def _model_keys_compatible(a: set[str], b: set[str]) -> bool:
+    """교집합이 있거나, 한쪽 키가 다른쪽 키의 prefix이면 호환 (SN5000S ↔ SN5000)."""
+    if a & b:
+        return True
+    return any(ka.startswith(ks) or ks.startswith(ka) for ka in a for ks in b)
+
 # 브랜드 키워드 → 정규화 이름 매핑 (부분 일치)
 _BRAND_MAP: dict[str, str] = {
     "삼성": "samsung", "samsung": "samsung",
@@ -129,6 +136,25 @@ def _ddr_gen(name: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
+_SSD_CAPACITY_CLASSES = (
+    (0,    150,   128),
+    (150,  300,   256),
+    (300,  600,   512),
+    (600,  1200,  1024),
+    (1200, 2500,  2048),
+    (2500, 5000,  4096),
+    (5000, 10000, 8192),
+)
+
+
+def _ssd_capacity_class(gb: int) -> int:
+    """500/512 등 미묘하게 다른 용량 표기를 업계 표준 클래스로 정규화."""
+    for lo, hi, cls in _SSD_CAPACITY_CLASSES:
+        if lo < gb <= hi:
+            return cls
+    return gb
+
+
 def _storage_gb(name: str) -> int | None:
     """제품명에서 저장 용량(GB 단위로 통일)을 추출. 패키지 합계 용량 우선."""
     # "32GB(16Gx2)" 패턴 — 패키지 합계 용량 사용
@@ -184,9 +210,14 @@ def match_products(
         best_score = 0.0
         best_idx = -1
 
+        dw_cap_class = _ssd_capacity_class(dw_cap) if is_ssd and dw_cap else dw_cap
+        smt_cap_classes = [(_ssd_capacity_class(c) if is_ssd and c else c) for c in smt_caps]
+
         for i, smt_norm in enumerate(smt_norms):
-            # 용량이 명시된 경우 반드시 일치해야 함
-            if dw_cap is not None and smt_caps[i] is not None and dw_cap != smt_caps[i]:
+            # 용량이 명시된 경우 반드시 일치해야 함 (SSD는 클래스 단위 비교: 500GB≈512GB)
+            cap_dw = dw_cap_class if is_ssd else dw_cap
+            cap_smt = smt_cap_classes[i] if is_ssd else smt_caps[i]
+            if cap_dw is not None and cap_smt is not None and cap_dw != cap_smt:
                 continue
             # 브랜드가 양쪽 모두 식별된 경우 반드시 일치해야 함
             if dw_brand and smt_brands[i] and dw_brand != smt_brands[i]:
@@ -194,11 +225,11 @@ def match_products(
             # DDR 세대가 양쪽 모두 식별된 경우 반드시 일치해야 함
             if dw_ddr and smt_ddrs[i] and dw_ddr != smt_ddrs[i]:
                 continue
-            # SSD: 모델 키 집합 교집합이 없으면 다른 시리즈 → 매칭 거부
-            if is_ssd and dw_model_keys and smt_model_keys_list[i] and not (dw_model_keys & smt_model_keys_list[i]):
+            # SSD: 모델 키 집합이 호환되지 않으면 다른 시리즈 → 매칭 거부
+            if is_ssd and dw_model_keys and smt_model_keys_list[i] and not _model_keys_compatible(dw_model_keys, smt_model_keys_list[i]):
                 continue
-            # SSD: 실제 모델 번호(WD 컬러라인 제외)가 양쪽 모두 있는데 다르면 → 매칭 거부 (SN850P ≠ SN850X)
-            if is_ssd and dw_strong_keys and smt_strong_keys_list[i] and not (dw_strong_keys & smt_strong_keys_list[i]):
+            # SSD: 실제 모델 번호(WD 컬러라인 제외)가 양쪽 모두 있는데 호환 안되면 → 매칭 거부 (SN850P ≠ SN850X)
+            if is_ssd and dw_strong_keys and smt_strong_keys_list[i] and not _model_keys_compatible(dw_strong_keys, smt_strong_keys_list[i]):
                 continue
             score = fuzz.WRatio(dw_norm, smt_norm)
             effective_threshold = MATCH_THRESHOLD

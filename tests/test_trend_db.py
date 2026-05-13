@@ -1,0 +1,77 @@
+from datetime import date, datetime, timezone
+
+import pytest
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
+from api.routes.trend import trend_daily_history
+from db.models import Base, DailyPrice, Product, SourceEnum, CategoryEnum
+
+
+@pytest.mark.asyncio
+async def test_trend_daily_history_uses_saved_daily_prices_only(tmp_path):
+    db_path = tmp_path / "trend.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    saved_day = date(2026, 5, 12)
+    async with session_factory() as session:
+        session.add_all(
+            [
+                DailyPrice(
+                    date=saved_day,
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="삼성전자 DDR5-5600 (16GB)",
+                    avg_price=340000,
+                    min_price=330000,
+                    max_price=350000,
+                    crawl_count=2,
+                ),
+                DailyPrice(
+                    date=saved_day,
+                    source=SourceEnum.smtcom,
+                    category=CategoryEnum.memory,
+                    name="삼성전자 DDR5-5600 (16GB) PC5-44800",
+                    avg_price=335000,
+                    min_price=330000,
+                    max_price=340000,
+                    crawl_count=2,
+                ),
+                Product(
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="오늘만 있는 데이터",
+                    price=999999,
+                    rank=1,
+                    crawled_at=datetime(2026, 5, 13, 1, 0, tzinfo=timezone.utc),
+                ),
+                Product(
+                    source=SourceEnum.smtcom,
+                    category=CategoryEnum.memory,
+                    name="삼성전자 DDR5-5600 (16GB) PC5-44800",
+                    price=333000,
+                    rank=None,
+                    crawled_at=datetime(2026, 5, 13, 1, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        response = await trend_daily_history(
+            category="memory",
+            danawa_name="삼성전자 DDR5-5600 (16GB)",
+            smtcom_name=None,
+            days=30,
+            db=session,
+        )
+
+    assert response.danawa_name == "삼성전자 DDR5-5600 (16GB)"
+    assert response.smtcom_name == "삼성전자 DDR5-5600 (16GB) PC5-44800"
+    assert len(response.history) == 1
+    assert response.history[0].date == str(saved_day)
+    assert response.history[0].danawa_price == 340000
+    assert response.history[0].smtcom_price == 335000

@@ -44,7 +44,12 @@ header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
 /* ── Tabs ────────────────────────────────────────────────────── */
 .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 .tab-btn {
-  padding: 8px 24px;
+  height: 40px;
+  padding: 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   border: 2px solid var(--gray-200);
   border-radius: 100px;
   background: #fff;
@@ -111,10 +116,15 @@ header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
   border-radius: var(--radius);
   flex-wrap: wrap;
 }
-.filter-group { display: flex; align-items: center; gap: 6px; }
+.filter-group { display: flex; align-items: center; gap: 6px; row-gap: 6px; flex-wrap: wrap; }
 .filter-label { font-size: 13px; font-weight: 600; color: var(--gray-600); white-space: nowrap; }
 .filter-btn {
-  padding: 4px 12px;
+  height: 28px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   border: 1px solid var(--gray-200);
   border-radius: 4px;
   background: #fff;
@@ -124,8 +134,10 @@ header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
   color: var(--gray-600);
   font-family: inherit;
 }
+.filter-group .filter-btn { margin-bottom: 0; }
 .filter-btn:hover { background: var(--gray-100); }
 .filter-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+.filter-sep { color: var(--gray-300); font-size: 16px; margin: 0 2px; user-select: none; }
 
 .toggle-label {
   display: flex;
@@ -242,7 +254,7 @@ td { padding: 12px 16px; vertical-align: top; }
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(0,0,0,0.14);
-  padding: 14px;
+  padding: 12px;
   width: 360px;
   pointer-events: auto;
 }
@@ -328,7 +340,7 @@ td { padding: 12px 16px; vertical-align: top; }
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 20px;
-  min-height: 120px;
+  min-height: 480px; /* 더 넓은 세로 공간 확보 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,7 +352,7 @@ td { padding: 12px 16px; vertical-align: top; }
   box-shadow: var(--shadow);
   padding: 20px;
   width: 100% !important;
-  height: 380px !important;
+  height: 520px !important; /* 더 넓게 보여주기 */
 }
 
 .trend-empty {
