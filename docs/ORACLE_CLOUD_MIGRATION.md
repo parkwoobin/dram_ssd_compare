@@ -100,11 +100,21 @@ ls -lh /app/data
 
 Fly.io는 기본 HTTPS를 제공하지만, OCI VM 단독 배포는 직접 붙여야 합니다.
 
-가장 간단한 운영 경로:
+가장 간단한 운영 경로는 Caddy를 리버스 프록시로 붙이는 것입니다.
 
 1. 도메인의 A 레코드를 OCI 공인 IP로 지정합니다.
-2. Caddy 또는 Nginx Proxy Manager 같은 리버스 프록시를 추가합니다.
-3. 앱 컨테이너는 내부 포트 `8000`만 노출하고, 프록시가 80/443을 담당하게 합니다.
+2. OCI Security List 또는 Network Security Group에서 80/443 TCP를 엽니다.
+3. `.env`에 도메인을 설정합니다.
+4. HTTPS용 Compose 파일로 실행합니다.
+
+```bash
+sed -i 's/^DOMAIN=.*/DOMAIN=example.com/' .env
+docker compose -f docker-compose.oracle.yml down
+docker compose -f docker-compose.oracle-https.yml up -d --build
+docker compose -f docker-compose.oracle-https.yml logs -f caddy
+```
+
+Caddy가 Let's Encrypt 인증서를 자동 발급합니다. DNS A 레코드가 OCI 공인 IP를 가리키고 80/443이 열려 있어야 인증서 발급이 성공합니다.
 
 도메인이 없다면 우선 `http://<OCI_PUBLIC_IP>/`로 운영할 수 있습니다.
 

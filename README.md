@@ -255,6 +255,8 @@ docker compose -f docker-compose.oracle.yml up -d --build
 
 상세 절차는 [docs/ORACLE_CLOUD_MIGRATION.md](docs/ORACLE_CLOUD_MIGRATION.md)를 참고하세요.
 
+도메인과 HTTPS를 붙일 때는 `.env`의 `DOMAIN`을 설정한 뒤 `docker-compose.oracle-https.yml`을 사용합니다.
+
 ## 장애 대응 체크리스트
 
 - 서버 기동 확인

@@ -322,11 +322,7 @@ async function loadTrendProducts() {
       el.trendSelect.value = encodeURIComponent(defaultName);
     }
     
-    // 데이터가 없으면 테스트 데이터 로드
     await loadTrendHistory();
-    if (el.trendEmpty.style.display !== 'none' || el.trendCanvas.style.display === 'none') {
-      await loadTrendHistoryDebug();
-    }
   } catch (e) {
     el.trendSelect.innerHTML = '<option value="">불러오기 실패</option>';
   }
@@ -362,31 +358,6 @@ async function loadTrendHistory() {
     renderTrendChart(data);
   } catch (e) {
     el.trendChartWrap.innerHTML = `<div class="error-msg">⚠️ 로드 실패: ${e.message}</div>`;
-  }
-}
-
-async function loadTrendHistoryDebug() {
-  // 테스트 데이터 로드
-  el.trendChartWrap.style.display = 'flex';
-  el.trendChartWrap.innerHTML = '<div class="loading"><div class="spinner"></div> 테스트 데이터 로딩...</div>';
-  el.trendCanvas.style.display = 'none';
-  el.trendEmpty.style.display = 'none';
-
-  try {
-    const res = await fetch(`/api/trend/test-debug?category=${state.trendCategory}`);
-    const data = await res.json();
-
-    el.trendChartWrap.style.display = 'none';
-
-    if (!data.history || data.history.length === 0) {
-      el.trendEmpty.style.display = 'block';
-      return;
-    }
-
-    el.trendCanvas.style.display = 'block';
-    renderTrendChart(data);
-  } catch (e) {
-    console.log('테스트 데이터 로딩 실패:', e);
   }
 }
 
