@@ -1,0 +1,27 @@
+# fly.toml — Fly.io 배포 설정
+app = "dram-ssd-compare"
+primary_region = "nrt"  # 도쿄 (한국과 가장 가까운 리전)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DATABASE_URL = "sqlite+aiosqlite:///./data/prices.db"
+  ENABLE_SCHEDULER = "true"
+  ENABLE_INITIAL_CRAWL = "true"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false   # 무료 플랜이라도 항상 켜두기
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = "dram_data"
+  destination = "/app/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
