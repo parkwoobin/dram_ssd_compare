@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta, date as date_type
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, asc, delete
+from sqlalchemy import select, func, desc, asc, delete, or_
 from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum
 
 
@@ -138,6 +138,56 @@ async def aggregate_daily_prices(
     return total
 
 
+async def seed_daily_prices_from_previous_day(
+    session: AsyncSession,
+    target_date: date_type | None = None,
+) -> int:
+    """target_date(KST)에 전날 daily_prices를 복사해 자정 기준 가격을 채운다."""
+    if target_date is None:
+        target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    source_date = target_date - timedelta(days=1)
+
+    result = await session.execute(
+        select(DailyPrice).where(DailyPrice.date == source_date)
+    )
+    previous_rows = result.scalars().all()
+
+    copied = 0
+    for row in previous_rows:
+        existing = await session.execute(
+            select(DailyPrice).where(
+                DailyPrice.date == target_date,
+                DailyPrice.source == row.source,
+                DailyPrice.name == row.name,
+            )
+        )
+        dp = existing.scalar_one_or_none()
+        if dp and dp.crawl_count != 0:
+            continue
+
+        if dp:
+            dp.category = row.category
+            dp.avg_price = row.avg_price
+            dp.min_price = row.min_price
+            dp.max_price = row.max_price
+            dp.crawl_count = 0
+        else:
+            session.add(DailyPrice(
+                date=target_date,
+                source=row.source,
+                category=row.category,
+                name=row.name,
+                avg_price=row.avg_price,
+                min_price=row.min_price,
+                max_price=row.max_price,
+                crawl_count=0,
+            ))
+        copied += 1
+
+    await session.commit()
+    return copied
+
+
 async def prune_old_products(
     session: AsyncSession,
     retention_days: int = 7,
@@ -194,7 +244,7 @@ async def get_daily_history(
     """일별 평균 가격 기록 반환 (날짜 오름차순). 오늘은 Product 테이블 실시간 집계 포함."""
     if today is None:
         today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
-    cutoff = today - timedelta(days=days)
+    cutoff = today - timedelta(days=max(days - 1, 0))
     today_str = str(today)
 
     dw_result = await session.execute(
@@ -235,6 +285,57 @@ async def get_daily_history(
             smt_rows[today_str] = price
 
     all_dates = sorted(set(dw_rows) | set(smt_rows))
+    if not all_dates and days == 1:
+        latest_conditions = [
+            (DailyPrice.source == SourceEnum.danawa) & (DailyPrice.name == danawa_name)
+        ]
+        if smtcom_name:
+            latest_conditions.append(
+                (DailyPrice.source == SourceEnum.smtcom) & (DailyPrice.name == smtcom_name)
+            )
+
+        latest_result = await session.execute(
+            select(func.max(DailyPrice.date))
+            .where(
+                DailyPrice.category == category,
+                DailyPrice.date <= today,
+                or_(*latest_conditions),
+            )
+        )
+        latest_date = latest_result.scalar()
+        if latest_date is not None:
+            dw_result = await session.execute(
+                select(DailyPrice.avg_price)
+                .where(
+                    DailyPrice.source == SourceEnum.danawa,
+                    DailyPrice.category == category,
+                    DailyPrice.name == danawa_name,
+                    DailyPrice.date == latest_date,
+                )
+            )
+            dw_price = dw_result.scalar()
+
+            smt_price = None
+            if smtcom_name:
+                smt_result = await session.execute(
+                    select(DailyPrice.avg_price)
+                    .where(
+                        DailyPrice.source == SourceEnum.smtcom,
+                        DailyPrice.category == category,
+                        DailyPrice.name == smtcom_name,
+                        DailyPrice.date == latest_date,
+                    )
+                )
+                smt_price = smt_result.scalar()
+
+            return [
+                {
+                    "date": str(latest_date),
+                    "danawa_price": dw_price,
+                    "smtcom_price": smt_price,
+                }
+            ]
+
     return [
         {
             "date": d,
@@ -255,7 +356,7 @@ async def get_saved_daily_history(
     """daily_prices에 저장된 일별 평균 가격만 반환 (실시간 fallback 없음)."""
     now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
     today = now_kst.date()
-    cutoff = today - timedelta(days=days)
+    cutoff = today - timedelta(days=max(days - 1, 0))
 
     dw_result = await session.execute(
         select(DailyPrice.date, DailyPrice.avg_price)

@@ -103,6 +103,8 @@ _CAPACITY_RE = re.compile(
 )
 _NOISE_RE = re.compile(r"[^\w\s]")
 _SPACE_RE = re.compile(r"\s+")
+_USED_RE = re.compile(r"\b(중고|리퍼|refurbished|used)\b", re.IGNORECASE)
+_LAPTOP_MEMORY_RE = re.compile(r"(노트북|랩탑|SODIMM|SO-DIMM|SO DIMM|소디imm|소디)", re.IGNORECASE)
 
 
 def _normalize(name: str) -> str:
@@ -134,6 +136,23 @@ _DDR_RE = re.compile(r"\bDDR(\d)\b", re.IGNORECASE)
 def _ddr_gen(name: str) -> int | None:
     m = _DDR_RE.search(name)
     return int(m.group(1)) if m else None
+
+
+def _is_used(name: str) -> bool:
+    return bool(_USED_RE.search(name))
+
+
+def _is_laptop_memory(name: str) -> bool:
+    return bool(_LAPTOP_MEMORY_RE.search(name))
+
+
+def _memory_variant_compatible(danawa_name: str, smtcom_name: str) -> bool:
+    """중고/노트북 메모리를 일반 신품 데스크탑 메모리와 섞어 매칭하지 않는다."""
+    if _is_used(danawa_name) != _is_used(smtcom_name):
+        return False
+    if _is_laptop_memory(danawa_name) != _is_laptop_memory(smtcom_name):
+        return False
+    return True
 
 
 _SSD_CAPACITY_CLASSES = (
@@ -194,6 +213,8 @@ def match_products(
     smt_caps = [_storage_gb(n) for n in smt_names]
     smt_brands = [_extract_brand(n) for n in smt_names]
     smt_ddrs = [_ddr_gen(n) for n in smt_names]
+    smt_used = [_is_used(n) for n in smt_names]
+    smt_laptop_memory = [_is_laptop_memory(n) for n in smt_names]
     is_ssd = category == "ssd"
     smt_model_keys_list = [_ssd_model_keys(n) for n in smt_names] if is_ssd else [set()] * len(smt_names)
     smt_strong_keys_list = [_ssd_strong_keys(n) for n in smt_names] if is_ssd else [set()] * len(smt_names)
@@ -204,6 +225,8 @@ def match_products(
         dw_cap = _storage_gb(dw["name"])
         dw_brand = _extract_brand(dw["name"])
         dw_ddr = _ddr_gen(dw["name"])
+        dw_used = _is_used(dw["name"])
+        dw_laptop_memory = _is_laptop_memory(dw["name"])
         dw_model_keys = _ssd_model_keys(dw["name"]) if is_ssd else set()
         dw_strong_keys = _ssd_strong_keys(dw["name"]) if is_ssd else set()
 
@@ -214,6 +237,11 @@ def match_products(
         smt_cap_classes = [(_ssd_capacity_class(c) if is_ssd and c else c) for c in smt_caps]
 
         for i, smt_norm in enumerate(smt_norms):
+            if category == "memory":
+                if dw_used != smt_used[i]:
+                    continue
+                if dw_laptop_memory != smt_laptop_memory[i]:
+                    continue
             # 용량이 명시된 경우 반드시 일치해야 함 (SSD는 클래스 단위 비교: 500GB≈512GB)
             cap_dw = dw_cap_class if is_ssd else dw_cap
             cap_smt = smt_cap_classes[i] if is_ssd else smt_caps[i]

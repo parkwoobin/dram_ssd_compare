@@ -54,6 +54,27 @@ def test_match_ddr_mismatch():
     assert result[0]["smtcom"] is None  # DDR 세대 불일치
 
 
+def test_match_rejects_used_memory_to_new_memory():
+    dw = [{"name": "삼성전자 DDR4-3200 중고 (16GB) [AS1년보증]", "price": 160600, "rank": 1}]
+    smt = [{"name": "삼성전자 DDR4-3200 (16GB)", "price": 265000, "smtcom_id": "1"}]
+    result = match_products(dw, smt, category="memory")
+    assert result[0]["smtcom"] is None
+
+
+def test_match_rejects_laptop_memory_to_desktop_memory():
+    dw = [{"name": "삼성전자 노트북 DDR4-3200 (16GB)", "price": 45000, "rank": 1}]
+    smt = [{"name": "삼성전자 DDR4-3200 (16GB)", "price": 50000, "smtcom_id": "1"}]
+    result = match_products(dw, smt, category="memory")
+    assert result[0]["smtcom"] is None
+
+
+def test_match_allows_laptop_memory_to_laptop_memory():
+    dw = [{"name": "삼성전자 노트북 DDR4-3200 (16GB)", "price": 45000, "rank": 1}]
+    smt = [{"name": "삼성전자 노트북 DDR4-3200 (16GB)", "price": 50000, "smtcom_id": "1"}]
+    result = match_products(dw, smt, category="memory")
+    assert result[0]["smtcom"] is not None
+
+
 # --- 크롤러 통합 테스트 (실제 네트워크 필요) ---
 
 @pytest.mark.asyncio

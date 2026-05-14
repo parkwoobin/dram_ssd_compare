@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, func
 
 from db.models import Base, Product, DailyPrice, SourceEnum, CategoryEnum
-from scheduler.jobs import create_scheduler, aggregate_daily
+from scheduler.jobs import create_scheduler, aggregate_daily, seed_today_prices
 from db.crud import prune_old_products
 import scheduler.jobs as jobs_module
 
@@ -14,12 +14,16 @@ import scheduler.jobs as jobs_module
 async def test_create_scheduler_runs_hourly_on_the_hour():
     scheduler = create_scheduler()
     crawl_job = scheduler.get_job("crawl_all")
+    seed_job = scheduler.get_job("seed_today_prices")
     aggregate_job = scheduler.get_job("aggregate_daily")
 
     assert crawl_job is not None
+    assert seed_job is not None
     assert aggregate_job is not None
     assert str(crawl_job.trigger.fields[5]) == "*"
     assert str(crawl_job.trigger.fields[6]) == "0"
+    assert str(seed_job.trigger.fields[5]) == "0"
+    assert str(seed_job.trigger.fields[6]) == "0"
     assert str(aggregate_job.trigger.fields[5]) == "18"
     assert str(aggregate_job.trigger.fields[6]) == "5"
 
@@ -134,3 +138,62 @@ async def test_prune_old_products_keeps_daily_prices(tmp_path):
     assert deleted == 1
     assert product_count == 1
     assert daily_count == 1
+
+
+@pytest.mark.asyncio
+async def test_seed_today_prices_copies_previous_day_without_overwriting_actual(tmp_path, monkeypatch):
+    db_path = tmp_path / "seed_prices.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    monkeypatch.setattr(jobs_module, "AsyncSessionLocal", session_factory)
+
+    async with session_factory() as session:
+        session.add_all(
+            [
+                DailyPrice(
+                    date=date(2026, 5, 14),
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="삼성전자 DDR5-5600 (16GB)",
+                    avg_price=340000,
+                    min_price=330000,
+                    max_price=350000,
+                    crawl_count=9,
+                ),
+                DailyPrice(
+                    date=date(2026, 5, 15),
+                    source=SourceEnum.smtcom,
+                    category=CategoryEnum.memory,
+                    name="이미 실제 집계된 제품",
+                    avg_price=111000,
+                    min_price=111000,
+                    max_price=111000,
+                    crawl_count=1,
+                ),
+            ]
+        )
+        await session.commit()
+
+    copied = await seed_today_prices(target_date=date(2026, 5, 15))
+
+    async with session_factory() as session:
+        rows = (
+            await session.execute(
+                select(DailyPrice).where(DailyPrice.date == date(2026, 5, 15))
+            )
+        ).scalars().all()
+
+    seeded = next(r for r in rows if r.name == "삼성전자 DDR5-5600 (16GB)")
+    actual = next(r for r in rows if r.name == "이미 실제 집계된 제품")
+
+    assert copied == 1
+    assert seeded.avg_price == 340000
+    assert seeded.min_price == 330000
+    assert seeded.max_price == 350000
+    assert seeded.crawl_count == 0
+    assert actual.avg_price == 111000
+    assert actual.crawl_count == 1

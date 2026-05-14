@@ -15,6 +15,7 @@ from db.crud import (
     create_crawl_log,
     finish_crawl_log,
     aggregate_daily_prices,
+    seed_daily_prices_from_previous_day,
     prune_old_products,
 )
 
@@ -98,6 +99,21 @@ async def aggregate_daily(target_date=None):
         return 0
 
 
+async def seed_today_prices(target_date=None):
+    """자정에 전날 확정 가격을 오늘 임시 가격으로 복사."""
+    logger.info("오늘 가격 기준값 복사 시작")
+    try:
+        if target_date is None:
+            target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+        async with AsyncSessionLocal() as session:
+            count = await seed_daily_prices_from_previous_day(session, target_date=target_date)
+        logger.info("오늘 가격 기준값 복사 완료: %d개 레코드", count)
+        return count
+    except Exception as e:
+        logger.error("오늘 가격 기준값 복사 실패: %s", e)
+        return 0
+
+
 def create_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
     scheduler.add_job(
@@ -108,6 +124,13 @@ def create_scheduler() -> AsyncIOScheduler:
             timezone="Asia/Seoul",
         ),
         id="crawl_all",
+        replace_existing=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        seed_today_prices,
+        CronTrigger(hour=0, minute="0", timezone="Asia/Seoul"),
+        id="seed_today_prices",
         replace_existing=True,
         max_instances=1,
     )

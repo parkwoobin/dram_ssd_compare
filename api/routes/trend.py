@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import get_db
 from db.models import CategoryEnum
 from db.crud import get_trend_products, get_daily_history, get_smtcom_product_names
-from crawler.matcher import _normalize, _storage_gb, _extract_brand, _ddr_gen, MATCH_THRESHOLD
+from crawler.matcher import _normalize, _storage_gb, _extract_brand, _ddr_gen, _memory_variant_compatible, MATCH_THRESHOLD
 from rapidfuzz import fuzz
 
 router = APIRouter()
@@ -30,7 +30,7 @@ class TrendHistoryResponse(BaseModel):
     category: str
 
 
-def _find_best_smtcom(danawa_name: str, smtcom_names: list[str]) -> str | None:
+def _find_best_smtcom(danawa_name: str, smtcom_names: list[str], category: CategoryEnum) -> str | None:
     dw_cap = _storage_gb(danawa_name)
     dw_brand = _extract_brand(danawa_name)
     dw_ddr = _ddr_gen(danawa_name)
@@ -39,6 +39,8 @@ def _find_best_smtcom(danawa_name: str, smtcom_names: list[str]) -> str | None:
     best_score = 0.0
     best_name = None
     for smt_name in smtcom_names:
+        if category == CategoryEnum.memory and not _memory_variant_compatible(danawa_name, smt_name):
+            continue
         if dw_cap and _storage_gb(smt_name) and dw_cap != _storage_gb(smt_name):
             continue
         if dw_brand and _extract_brand(smt_name) and dw_brand != _extract_brand(smt_name):
@@ -68,7 +70,7 @@ async def trend_history(
     category: Literal["memory", "ssd"] = Query(...),
     danawa_name: str = Query(...),
     smtcom_name: Optional[str] = Query(None),
-    days: int = Query(30, ge=7, le=365),
+    days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
 ):
     cat = CategoryEnum(category)
@@ -76,7 +78,7 @@ async def trend_history(
     resolved_smtcom = smtcom_name
     if not resolved_smtcom:
         smt_names = await get_smtcom_product_names(db, cat)
-        resolved_smtcom = _find_best_smtcom(danawa_name, smt_names)
+        resolved_smtcom = _find_best_smtcom(danawa_name, smt_names, cat)
 
     history_rows = await get_daily_history(db, cat, danawa_name, resolved_smtcom, days)
     history = [TrendPoint(**r) for r in history_rows]
@@ -94,7 +96,7 @@ async def trend_daily_history(
     category: Literal["memory", "ssd"] = Query(...),
     danawa_name: str = Query(...),
     smtcom_name: Optional[str] = Query(None),
-    days: int = Query(30, ge=7, le=365),
+    days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
 ):
     cat = CategoryEnum(category)
@@ -102,7 +104,7 @@ async def trend_daily_history(
     resolved_smtcom = smtcom_name
     if not resolved_smtcom:
         smt_names = await get_smtcom_product_names(db, cat)
-        resolved_smtcom = _find_best_smtcom(danawa_name, smt_names)
+        resolved_smtcom = _find_best_smtcom(danawa_name, smt_names, cat)
 
     # 저장된 데이터 + 오늘 실시간 데이터 포함
     history_rows = await get_daily_history(db, cat, danawa_name, resolved_smtcom, days)

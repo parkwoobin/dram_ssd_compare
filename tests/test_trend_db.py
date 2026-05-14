@@ -134,3 +134,41 @@ async def test_daily_history_includes_today_latest_products(tmp_path):
         {"date": "2026-05-14", "danawa_price": 340000, "smtcom_price": None},
         {"date": "2026-05-15", "danawa_price": 330000, "smtcom_price": None},
     ]
+
+
+@pytest.mark.asyncio
+async def test_one_day_history_falls_back_to_latest_saved_day(tmp_path):
+    db_path = tmp_path / "trend_latest_day.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        session.add(
+            DailyPrice(
+                date=date(2026, 5, 13),
+                source=SourceEnum.danawa,
+                category=CategoryEnum.memory,
+                name="삼성전자 DDR5-5600 (16GB)",
+                avg_price=357653.333,
+                min_price=350000,
+                max_price=360000,
+                crawl_count=3,
+            )
+        )
+        await session.commit()
+
+        history = await get_daily_history(
+            session,
+            CategoryEnum.memory,
+            "삼성전자 DDR5-5600 (16GB)",
+            None,
+            days=1,
+            today=date(2026, 5, 15),
+        )
+
+    assert history == [
+        {"date": "2026-05-13", "danawa_price": 357653.333, "smtcom_price": None},
+    ]

@@ -5,8 +5,9 @@
 ## 현재 상태 요약
 
 - 비교 API는 실시간 크롤링이 아니라 DB 최신 스냅샷 기준으로 동작
-- 가격 추세는 일별 집계 데이터(`daily_prices`) + 당일 실시간 평균 fallback으로 표시
+- 가격 추세는 일별 집계 데이터(`daily_prices`) + 당일 최신 수집 가격 fallback으로 표시
 - 스케줄러는 매 정각 실행되며, 기본 수집 시간대는 09:00~18:00(KST)
+- 매일 00:00(KST)에 전날 확정 가격을 오늘 임시 가격으로 복사하고, 18:05(KST)에 당일 실제 집계로 확정
 - 프론트는 필터/정렬/차트 UI가 개선된 상태
   - 필터 버튼 래핑/정렬 보정
   - 차트 범례 마커 정사각형 표시
@@ -95,13 +96,11 @@ dram_ssd_compare/
   - query: `category=memory|ssd`
 
 - `GET /api/trend/history`
-  - query: `category`, `danawa_name`, `smtcom_name(optional)`, `days(7~365)`
+  - query: `category`, `danawa_name`, `smtcom_name(optional)`, `days(1~365)`
 
 - `GET /api/trend/daily-history`
-  - `trend/history`와 동일, 일별 데이터 중심(오늘은 실시간 평균 fallback 포함)
-
-- `GET /api/trend/test-debug`
-  - 프론트 차트 확인용 테스트 데이터
+  - `trend/history`와 동일, 일별 데이터 중심(오늘은 최신 수집 가격 fallback 포함)
+  - query: `category`, `danawa_name`, `smtcom_name(optional)`, `days(1~365)`
 
 - `GET /health`
   - 헬스체크
@@ -269,7 +268,7 @@ docker compose -f docker-compose.oracle.yml up -d --build
   - `/api/compare/{category}` 호출 파라미터(`sort`, `ddr`, `capacity_gb`) 확인
 - 추세 차트 비어 있음
   - `daily_prices` 집계 여부 확인
-  - 집계 전이라면 `/api/trend/test-debug`로 프론트 렌더링 우선 점검
+  - 당일 데이터는 09:00 이후 시간별 수집이 시작되면 최신 수집 가격으로 표시
 - 포트 충돌/재기동 실패
   - 8000 포트 점유 PID 종료 후 재기동
   - 가상환경 활성화 및 의존성 설치 상태 재확인

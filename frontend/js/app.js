@@ -8,7 +8,7 @@ const state = {
   capacityGb: '',
   memCapGb: '',
   trendCategory: 'memory',
-  trendDays: 30,
+  trendDays: 1,
   loading: false,
   allItems: [],
 };
@@ -385,6 +385,8 @@ function renderTrendChart(data) {
           backgroundColor: 'rgba(37,99,235,0.1)',
           tension: 0.3,
           pointRadius: 4,
+          pointHitRadius: 12,
+          pointHoverRadius: 6,
           pointStyle: 'square',
           fill: false,
           spanGaps: true,
@@ -396,6 +398,8 @@ function renderTrendChart(data) {
           backgroundColor: 'rgba(220,38,38,0.1)',
           tension: 0.3,
           pointRadius: 4,
+          pointHitRadius: 12,
+          pointHoverRadius: 6,
           pointStyle: 'square',
           fill: false,
           spanGaps: true,
@@ -405,6 +409,10 @@ function renderTrendChart(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
       plugins: {
         legend: {
           position: 'top',
@@ -418,6 +426,8 @@ function renderTrendChart(data) {
           },
         },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           titleFont: { size: 13 },
           bodyFont: { size: 13 },
           callbacks: {
