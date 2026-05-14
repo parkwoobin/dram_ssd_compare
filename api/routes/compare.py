@@ -11,7 +11,7 @@ from crawler.matcher import match_products, _ddr_gen, _storage_gb
 
 router = APIRouter()
 
-SortKey = Literal["popular", "newest", "price_asc", "price_desc"]
+SortKey = Literal["popular", "price_asc", "price_desc"]
 CategoryKey = Literal["memory", "ssd"]
 
 _ECC_HARD = re.compile(r'\b(RDIMM|LRDIMM|Registered|서버용)\b', re.IGNORECASE)
@@ -107,9 +107,6 @@ def _to_response(category: str, sort: str, matched_list: list[dict]) -> CompareR
     if sort == "popular":
         # 다나와 인기상품순 (rank 기준)
         items.sort(key=lambda x: (x.danawa_rank is None, x.danawa_rank or float('inf')))
-    elif sort == "newest":
-        # 다나와 신상품순 (현재 일반상품과 동일하게 유지)
-        pass
     elif sort == "price_asc":
         items.sort(key=lambda x: (x.smtcom_price is None, x.smtcom_price or 0))
     elif sort == "price_desc":

@@ -92,6 +92,13 @@ def test_match_allows_laptop_memory_with_sodimm_notation():
     assert result[0]["smtcom"] is not None
 
 
+def test_match_allows_laptop_ddr5_5600_pc5_44800():
+    dw = [{"name": "삼성전자 노트북 DDR5-5600 (8GB) PC5-44800", "price": 25000, "rank": 1}]
+    smt = [{"name": "삼성전자 노트북 DDR5-5600 (8GB) PC5-44800", "price": 27000, "smtcom_id": "1"}]
+    result = match_products(dw, smt, category="memory")
+    assert result[0]["smtcom"] is not None
+
+
 def test_match_rejects_used_laptop_memory_to_new_laptop_memory():
     dw = [{"name": "삼성전자 노트북 DDR5-5600 중고 (8GB)", "price": 18000, "rank": 1}]
     smt = [{"name": "삼성전자 DDR5-5600 SODIMM (8GB) PC5-44800S", "price": 27000, "smtcom_id": "1"}]

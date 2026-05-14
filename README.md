@@ -21,7 +21,6 @@
 - 다나와 제품 기준 스마트컴 매칭 비교
 - 정렬 지원
   - `popular`: 다나와 rank 기준 정렬
-  - `newest`: 현재 별도 신규 기준 미적용(동일 데이터셋)
   - `price_asc`, `price_desc`: 스마트컴 가격 기준 정렬
 - 메모리 필터
   - DDR4/DDR5, ECC 제외, 용량(4/8/16/24/32/48/64/96/128/256GB)
@@ -87,7 +86,7 @@ dram_ssd_compare/
 - `GET /api/compare/{category}`
   - `category`: `memory` | `ssd`
   - query
-    - `sort`: `popular|newest|price_asc|price_desc`
+    - `sort`: `popular|price_asc|price_desc`
     - `ddr`: `4|5` (memory)
     - `ecc_exclude`: `true|false` (memory)
     - `capacity_gb`: 용량 필터
@@ -128,7 +127,6 @@ python -m db.database
 ## 운영 참고
 
 - 앱 시작 시 DB가 비어 있으면 초기 강제 크롤링을 1회 수행합니다.
-- 현재 정렬의 `newest`는 데이터 소스 특성상 별도 신규 기준이 아직 적용되지 않았습니다.
 
 ## 환경변수
 
