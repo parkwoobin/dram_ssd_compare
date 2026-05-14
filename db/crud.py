@@ -399,7 +399,7 @@ async def get_trend_products(
     session: AsyncSession,
     category: CategoryEnum,
 ) -> list[str]:
-    """다나와 최신 크롤 제품명 목록 (추세 드롭다운용)."""
+    """다나와 최신 크롤 제품명 목록 (추세 드롭다운용, 이름순)."""
     subq = (
         select(func.max(Product.crawled_at))
         .where(
@@ -417,7 +417,7 @@ async def get_trend_products(
         )
     )
     rows = result.all()
-    rows_sorted = sorted(rows, key=lambda r: (r.rank is None, r.rank or 9999))
+    rows_sorted = sorted(rows, key=lambda r: r.name.casefold())
     return [r.name for r in rows_sorted]
 
 

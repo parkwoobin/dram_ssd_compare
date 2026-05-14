@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from api.routes.trend import trend_daily_history
 from db.models import Base, DailyPrice, Product, SourceEnum, CategoryEnum
-from db.crud import get_daily_history
+from db.crud import get_daily_history, get_trend_products
 
 
 @pytest.mark.asyncio
@@ -171,4 +171,54 @@ async def test_one_day_history_falls_back_to_latest_saved_day(tmp_path):
 
     assert history == [
         {"date": "2026-05-13", "danawa_price": 357653.333, "smtcom_price": None},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_trend_products_are_sorted_by_name(tmp_path):
+    db_path = tmp_path / "trend_products.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    crawled_at = datetime(2026, 5, 15, 1, 0, tzinfo=timezone.utc)
+    async with session_factory() as session:
+        session.add_all(
+            [
+                Product(
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="SK하이닉스 DDR5-5600 (16GB)",
+                    price=50000,
+                    rank=1,
+                    crawled_at=crawled_at,
+                ),
+                Product(
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="삼성전자 DDR4-3200 (8GB)",
+                    price=20000,
+                    rank=2,
+                    crawled_at=crawled_at,
+                ),
+                Product(
+                    source=SourceEnum.danawa,
+                    category=CategoryEnum.memory,
+                    name="마이크론 Crucial DDR5-5600 (16GB)",
+                    price=45000,
+                    rank=3,
+                    crawled_at=crawled_at,
+                ),
+            ]
+        )
+        await session.commit()
+
+        products = await get_trend_products(session, CategoryEnum.memory)
+
+    assert products == [
+        "SK하이닉스 DDR5-5600 (16GB)",
+        "마이크론 Crucial DDR5-5600 (16GB)",
+        "삼성전자 DDR4-3200 (8GB)",
     ]
