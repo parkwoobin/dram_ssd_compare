@@ -157,18 +157,18 @@ async def prune_old_products(
     return result.rowcount or 0
 
 
-async def _get_today_avg(
+async def _get_today_latest_price(
     session: AsyncSession,
     source: SourceEnum,
     category: CategoryEnum,
     name: str,
     today: date_type,
-) -> float | None:
-    """오늘 Product 테이블에서 실시간 평균 가격 계산 (DailyPrice 미집계 시 대체)."""
+) -> int | None:
+    """오늘 Product 테이블에서 가장 최근 수집 가격 반환."""
     day_start_utc = datetime(today.year, today.month, today.day, 0, 0, 0) - timedelta(hours=9)
     day_end_utc = day_start_utc + timedelta(days=1)
     result = await session.execute(
-        select(func.avg(Product.price))
+        select(Product.price)
         .where(
             Product.source == source,
             Product.category == category,
@@ -177,8 +177,10 @@ async def _get_today_avg(
             Product.crawled_at >= day_start_utc,
             Product.crawled_at < day_end_utc,
         )
+        .order_by(Product.crawled_at.desc(), Product.id.desc())
+        .limit(1)
     )
-    return result.scalar()
+    return result.scalar_one_or_none()
 
 
 async def get_daily_history(
@@ -187,10 +189,11 @@ async def get_daily_history(
     danawa_name: str,
     smtcom_name: str | None,
     days: int = 30,
+    today: date_type | None = None,
 ) -> list[dict]:
     """일별 평균 가격 기록 반환 (날짜 오름차순). 오늘은 Product 테이블 실시간 집계 포함."""
-    now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
-    today = now_kst.date()
+    if today is None:
+        today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
     cutoff = today - timedelta(days=days)
     today_str = str(today)
 
@@ -220,16 +223,16 @@ async def get_daily_history(
         )
         smt_rows = {str(r.date): r.avg_price for r in smt_result.all()}
 
-    # 오늘 DailyPrice 미집계 시 Product 테이블에서 실시간 평균 보완
-    if today_str not in dw_rows:
-        avg = await _get_today_avg(session, SourceEnum.danawa, category, danawa_name, today)
-        if avg is not None:
-            dw_rows[today_str] = avg
+    # 오늘은 18:05 확정 집계 전에도 시간별 products 원본으로 차트에 반영한다.
+    # 오늘 DailyPrice가 이미 있어도, 장중에는 더 최신 평균으로 덮어쓴다.
+    price = await _get_today_latest_price(session, SourceEnum.danawa, category, danawa_name, today)
+    if price is not None:
+        dw_rows[today_str] = price
 
-    if smtcom_name and today_str not in smt_rows:
-        avg = await _get_today_avg(session, SourceEnum.smtcom, category, smtcom_name, today)
-        if avg is not None:
-            smt_rows[today_str] = avg
+    if smtcom_name:
+        price = await _get_today_latest_price(session, SourceEnum.smtcom, category, smtcom_name, today)
+        if price is not None:
+            smt_rows[today_str] = price
 
     all_dates = sorted(set(dw_rows) | set(smt_rows))
     return [

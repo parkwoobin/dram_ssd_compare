@@ -78,11 +78,11 @@ async def crawl_all(force: bool = False):
 
 
 async def aggregate_daily(target_date=None):
-    """하루치 가격 데이터 집계. 기본값은 KST 기준 전날."""
+    """하루치 가격 데이터 집계. 기본값은 KST 기준 오늘."""
     logger.info("일별 가격 집계 시작")
     try:
         if target_date is None:
-            target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date() - timedelta(days=1)
+            target_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
         async with AsyncSessionLocal() as session:
             count = await aggregate_daily_prices(session, target_date=target_date)
             pruned = await prune_old_products(session, retention_days=PRODUCT_RETENTION_DAYS)

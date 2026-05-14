@@ -48,6 +48,11 @@ function fmt(n) {
   return Number(n).toLocaleString('ko-KR') + '원';
 }
 
+function fmtTooltipWon(value) {
+  if (value == null) return '데이터 없음';
+  return `${Math.round(Number(value)).toLocaleString('ko-KR')}원`;
+}
+
 function rankBadge(rank) {
   const cls = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
   return `<span class="rank-badge ${cls}">${rank}</span>`;
@@ -275,7 +280,7 @@ function renderHoverChart(history) {
           titleFont: { size: 12 },
           bodyFont: { size: 12 },
           callbacks: {
-            label: ctx => ctx.dataset.label + ': ' + (ctx.raw != null ? Number(ctx.raw).toLocaleString('ko-KR') + '원' : '-'),
+            label: ctx => `${ctx.dataset.label}: ${fmtTooltipWon(ctx.raw)}`,
           },
         },
       },
@@ -368,10 +373,6 @@ function renderTrendChart(data) {
   const dw = data.history.map(h => h.danawa_price);
   const smt = data.history.map(h => h.smtcom_price);
 
-  const smtLabel = data.smtcom_name
-    ? `스마트컴 (${data.smtcom_name.length > 30 ? data.smtcom_name.slice(0, 28) + '…' : data.smtcom_name})`
-    : '스마트컴';
-
   trendChartInstance = new Chart(el.trendCanvas, {
     type: 'line',
     data: {
@@ -389,7 +390,7 @@ function renderTrendChart(data) {
           spanGaps: true,
         },
         {
-          label: smtLabel,
+          label: '스마트컴',
           data: smt,
           borderColor: '#dc2626',
           backgroundColor: 'rgba(220,38,38,0.1)',
@@ -420,7 +421,7 @@ function renderTrendChart(data) {
           titleFont: { size: 13 },
           bodyFont: { size: 13 },
           callbacks: {
-            label: ctx => ctx.dataset.label + ': ' + (ctx.raw != null ? Number(ctx.raw).toLocaleString('ko-KR') + '원' : '데이터 없음'),
+            label: ctx => `${ctx.dataset.label}: ${fmtTooltipWon(ctx.raw)}`,
           },
         },
       },
