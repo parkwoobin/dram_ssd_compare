@@ -40,6 +40,10 @@ let trendChartInstance = null;
 let hoverChartInstance = null;
 let hoverFetchController = null;
 let hoverHideTimer = null;
+const productNameCollator = new Intl.Collator(['ko-KR', 'en-US'], {
+  numeric: true,
+  sensitivity: 'base',
+});
 
 // ── Formatters ────────────────────────────────────────────────
 
@@ -304,7 +308,7 @@ async function loadTrendProducts() {
   try {
     const res = await fetch(`/api/trend/products?category=${state.trendCategory}`);
     const data = await res.json();
-    const products = data.products || [];
+    const products = [...(data.products || [])].sort((a, b) => productNameCollator.compare(a, b));
     if (products.length === 0) {
       el.trendSelect.innerHTML = '<option value="">제품 없음</option>';
       return;

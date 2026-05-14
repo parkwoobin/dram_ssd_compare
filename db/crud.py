@@ -1,7 +1,18 @@
+import re
 from datetime import datetime, timezone, timedelta, date as date_type
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, asc, delete, or_
 from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum
+
+
+_NATURAL_SORT_RE = re.compile(r"(\d+)")
+
+
+def _natural_sort_key(value: str) -> list:
+    return [
+        int(part) if part.isdigit() else part.casefold()
+        for part in _NATURAL_SORT_RE.split(value)
+    ]
 
 
 async def upsert_products(session: AsyncSession, products: list[dict]):
@@ -417,7 +428,7 @@ async def get_trend_products(
         )
     )
     rows = result.all()
-    rows_sorted = sorted(rows, key=lambda r: r.name.casefold())
+    rows_sorted = sorted(rows, key=lambda r: _natural_sort_key(r.name))
     return [r.name for r in rows_sorted]
 
 
