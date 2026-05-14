@@ -8,7 +8,7 @@ const state = {
   capacityGb: '',
   memCapGb: '',
   trendCategory: 'memory',
-  trendDays: 1,
+  trendDays: 7,
   loading: false,
   allItems: [],
 };

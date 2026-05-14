@@ -61,6 +61,16 @@ def test_match_rejects_used_memory_to_new_memory():
     assert result[0]["smtcom"] is None
 
 
+def test_match_rejects_used_ddr4_2666_memory_to_new_memory():
+    smt = [
+        {"name": "삼성전자 DDR4-2666 (8GB)", "price": 32000, "smtcom_id": "1"},
+        {"name": "삼성전자 DDR4-2666 (16GB)", "price": 61000, "smtcom_id": "2"},
+    ]
+    for name in ("삼성전자 DDR4-2666 중고 (8GB)", "삼성전자 DDR4-2666 중고 (16GB)"):
+        result = match_products([{"name": name, "price": 20000, "rank": 1}], smt, category="memory")
+        assert result[0]["smtcom"] is None
+
+
 def test_match_rejects_laptop_memory_to_desktop_memory():
     dw = [{"name": "삼성전자 노트북 DDR4-3200 (16GB)", "price": 45000, "rank": 1}]
     smt = [{"name": "삼성전자 DDR4-3200 (16GB)", "price": 50000, "smtcom_id": "1"}]
@@ -73,6 +83,20 @@ def test_match_allows_laptop_memory_to_laptop_memory():
     smt = [{"name": "삼성전자 노트북 DDR4-3200 (16GB)", "price": 50000, "smtcom_id": "1"}]
     result = match_products(dw, smt, category="memory")
     assert result[0]["smtcom"] is not None
+
+
+def test_match_allows_laptop_memory_with_sodimm_notation():
+    dw = [{"name": "삼성전자 노트북 DDR5-5600 (8GB)", "price": 25000, "rank": 1}]
+    smt = [{"name": "삼성전자 DDR5-5600 SODIMM (8GB) PC5-44800S", "price": 27000, "smtcom_id": "1"}]
+    result = match_products(dw, smt, category="memory")
+    assert result[0]["smtcom"] is not None
+
+
+def test_match_rejects_used_laptop_memory_to_new_laptop_memory():
+    dw = [{"name": "삼성전자 노트북 DDR5-5600 중고 (8GB)", "price": 18000, "rank": 1}]
+    smt = [{"name": "삼성전자 DDR5-5600 SODIMM (8GB) PC5-44800S", "price": 27000, "smtcom_id": "1"}]
+    result = match_products(dw, smt, category="memory")
+    assert result[0]["smtcom"] is None
 
 
 # --- 크롤러 통합 테스트 (실제 네트워크 필요) ---

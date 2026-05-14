@@ -103,8 +103,12 @@ _CAPACITY_RE = re.compile(
 )
 _NOISE_RE = re.compile(r"[^\w\s]")
 _SPACE_RE = re.compile(r"\s+")
-_USED_RE = re.compile(r"\b(중고|리퍼|refurbished|used)\b", re.IGNORECASE)
-_LAPTOP_MEMORY_RE = re.compile(r"(노트북|랩탑|SODIMM|SO-DIMM|SO DIMM|소디imm|소디)", re.IGNORECASE)
+_USED_RE = re.compile(r"(중고|리퍼|refurbished|\bused\b)", re.IGNORECASE)
+_LAPTOP_MEMORY_RE = re.compile(
+    r"(노트북|랩탑|laptop|SODIMM|SO-DIMM|SO DIMM|소디imm|소디|온보드|"
+    r"PC\d-\d{5}S\b|\b\d{5}S\b)",
+    re.IGNORECASE,
+)
 
 
 def _normalize(name: str) -> str:
