@@ -40,10 +40,12 @@ const el = {
 
 // ── Theme ─────────────────────────────────────────────────────
 (function initTheme() {
-  const saved = localStorage.getItem('site_theme') || 'light';
-  document.body.dataset.theme = saved;
+  const saved = localStorage.getItem('site_theme');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved ?? (systemDark ? 'dark' : 'light');
+  document.body.dataset.theme = theme;
   const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+  if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
 })();
 
 function broadcastTheme(theme) {
@@ -573,34 +575,61 @@ function showDdu() {
 function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
-  loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html?v=3', 'mark-root');
+  loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html?v=19', 'mark-root');
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+const _sidebarOverlay = document.getElementById('sidebar-overlay');
+const _sidebar = document.getElementById('sidebar');
+const _hamburgerBtn = document.getElementById('hamburger-btn');
+const _sidebarClose = document.getElementById('sidebar-close');
+
+function openSidebar() {
+  _sidebar.classList.add('open');
+  _sidebarOverlay.classList.add('open');
+}
+function closeSidebar() {
+  _sidebar.classList.remove('open');
+  _sidebarOverlay.classList.remove('open');
+}
+
+if (_hamburgerBtn) _hamburgerBtn.addEventListener('click', openSidebar);
+if (_sidebarClose) _sidebarClose.addEventListener('click', closeSidebar);
+if (_sidebarOverlay) _sidebarOverlay.addEventListener('click', closeSidebar);
+
+// ── Tab switch helper ─────────────────────────────────────────
+function switchTab(cat) {
+  el.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  document.querySelectorAll('.sidebar-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+
+  if (cat === 'trend') {
+    state.category = 'memory';
+    showTrend();
+  } else if (cat === 'ddu') {
+    showDdu();
+  } else if (cat === '3dmark') {
+    show3dmark();
+  } else {
+    state.category = cat;
+    state.memCapGb = '';
+    state.capacityGb = '';
+    document.querySelectorAll('[data-mem-cap]').forEach(b => b.classList.toggle('active', b.dataset.memCap === ''));
+    document.querySelectorAll('[data-cap]').forEach(b => b.classList.toggle('active', b.dataset.cap === ''));
+    showCompare(cat);
+    fetchAndRender();
+  }
 }
 
 // ── Event bindings ────────────────────────────────────────────
 
 el.tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const cat = btn.dataset.cat;
-    el.tabBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+  btn.addEventListener('click', () => switchTab(btn.dataset.cat));
+});
 
-    if (cat === 'trend') {
-      state.category = 'memory';
-      showTrend();
-    } else if (cat === 'ddu') {
-      showDdu();
-    } else if (cat === '3dmark') {
-      show3dmark();
-    } else {
-      state.category = cat;
-      // 카테고리 전환 시 용량 필터 초기화
-      state.memCapGb = '';
-      state.capacityGb = '';
-      document.querySelectorAll('[data-mem-cap]').forEach(b => b.classList.toggle('active', b.dataset.memCap === ''));
-      document.querySelectorAll('[data-cap]').forEach(b => b.classList.toggle('active', b.dataset.cap === ''));
-      showCompare(cat);
-      fetchAndRender();
-    }
+document.querySelectorAll('.sidebar-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    closeSidebar();
+    switchTab(btn.dataset.cat);
   });
 });
 

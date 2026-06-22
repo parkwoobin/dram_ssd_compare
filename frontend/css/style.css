@@ -70,15 +70,16 @@ header {
   padding: 16px 24px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 150;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
-#last-updated { font-size: 12px; color: var(--gray-400); }
+/* last-updated moved to footer */
 .theme-toggle-btn {
   width: 36px; height: 36px;
+  flex-shrink: 0;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
   background: #fff;
@@ -428,18 +429,108 @@ td { padding: 12px 16px; vertical-align: top; }
 }
 
 /* ── 인라인 HTML 섹션 ────────────────────────────────────────── */
-#3dmark-section {
+[id="3dmark-section"] {
   overflow: hidden;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  position: relative;
+  z-index: 1;
 }
 #ddu-section {
 }
+
+/* ── Hamburger & Sidebar ─────────────────────────────────────── */
+.hamburger-btn {
+  display: none;
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 20px;
+  align-items: center; justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+body[data-theme="dark"] .hamburger-btn { background: #1f2937; border-color: #374151; color: #f9fafb; }
+.hamburger-btn:hover { border-color: var(--gray-400); background: var(--gray-100); }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 200;
+}
+.sidebar-overlay.open { display: block; }
+
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 260px;
+  height: 100%;
+  background: #fff;
+  z-index: 201;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 12px rgba(0,0,0,.15);
+}
+body[data-theme="dark"] .sidebar { background: #1f2937; }
+.sidebar.open { transform: translateX(0); }
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.sidebar-title { font-weight: 700; font-size: 16px; color: var(--gray-900); }
+.sidebar-close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--gray-600);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.sidebar-close-btn:hover { background: var(--gray-100); }
+
+.sidebar-tabs {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px;
+  gap: 4px;
+}
+.sidebar-tab-btn {
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--gray-600);
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.sidebar-tab-btn:hover { background: var(--gray-100); color: var(--gray-900); }
+.sidebar-tab-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
 
 /* ── Footer ─────────────────────────────────────────────────── */
 .site-footer {
   margin: 18px auto 24px;
   text-align: center;
+}
+
+.last-updated-bar {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-bottom: 10px;
 }
 
 .github-link {
@@ -480,4 +571,6 @@ td { padding: 12px 16px; vertical-align: top; }
     overflow-wrap: anywhere;
     text-align: left;
   }
+  .tabs { display: none; }
+  .hamburger-btn { display: inline-flex; }
 }

@@ -20,8 +20,19 @@
   .mark-root { background:var(--page); color:var(--text); font-family:var(--font); font-size:14px; display:flex; flex-direction:column; height:82vh; min-height:500px; overflow:hidden; border-radius:8px; }
 
   .mark-root header { display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--page); flex-wrap:wrap; }
-  .mark-root .hleft { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .mark-root .hright { display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .mark-root header { position:relative !important; }
+  .mark-root #stage { will-change: auto !important; }
+  .mark-root .hleft { display:flex; align-items:center; flex-wrap:wrap; gap:12px; width:100%; padding-right:48px; }
+  .mark-root #gearBtn { position:absolute !important; top:10px; right:18px; }
+  .mark-root #panel { z-index: 9999 !important; }
+  .mark-root #backdrop { z-index: 9998 !important; }
+  .mark-root .hright { display:flex; align-items:center; gap:8px; width:100%; }
+  .mark-root .searchbox { flex:1 !important; min-width:0; }
+  .mark-root #search { width:100% !important; }
+  @media (max-width: 500px) {
+    .mark-root header button:not(.icon) { font-size: 11px !important; }
+    .mark-root header .tab { font-size: 11px !important; padding: 6px 8px !important; }
+  }
   .mark-root .searchbox { position:relative; display:inline-flex; align-items:center; }
   .mark-root #search { width:150px; padding-right:26px; }
   .mark-root .searchclear { position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent;
@@ -38,7 +49,7 @@
   .mark-root .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
   .mark-root select, .mark-root input[type=text] { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 10px; font-family:var(--font); font-size:13px; }
   .mark-root input[type=color] { width:30px; height:28px; border:1px solid var(--border); border-radius:6px; background:none; padding:0; cursor:pointer; }
-  .mark-root button { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer; font-family:var(--font); font-weight:700; font-size:13px; }
+  .mark-root button { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer; font-family:var(--font); font-weight:700; font-size:13px; white-space:nowrap; }
   .mark-root button:hover { border-color:var(--accent); }
   .mark-root button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
   .mark-root button.icon { width:36px; height:36px; padding:0; font-size:17px; display:flex; align-items:center; justify-content:center; }
@@ -94,8 +105,8 @@
   .phead { font-weight:800; font-size:15px; margin:0 0 4px; }
   hr.psep { border:none; border-top:1px solid var(--border); margin:12px 0; }
   @media (max-width:560px){
-    #panel { top:auto; bottom:0; right:0; left:0; width:100%; max-width:100%; border-radius:16px 16px 0 0; max-height:80vh; }
-    .sheet-handle { display:block; width:42px; height:4px; border-radius:2px; background:var(--border); margin:2px auto 12px; }
+    #panel { width:calc(100vw - 24px); max-width:360px; max-height:calc(100vh - 84px); border-radius:12px; }
+    .sheet-handle { display:none; }
     #search { width:120px; }
   }
 </style>
@@ -110,6 +121,7 @@
       <div class="tab active" data-kind="desktop">데스크탑</div>
       <div class="tab" data-kind="laptop">노트북</div>
     </div>
+    <button class="icon" id="gearBtn" title="옵션">⚙</button>
   </div>
   <div class="hright">
     <button id="distBtn" title="성능 분포(스팀 점유율)">성능분포</button>
@@ -117,7 +129,6 @@
       <input type="text" id="search" placeholder="검색">
       <button id="searchClear" class="searchclear" title="지우기">✕</button>
     </div>
-    <button class="icon" id="gearBtn" title="옵션">⚙</button>
     <button class="primary" id="exportBtn">PNG 내보내기</button>
   </div>
 </header>
@@ -861,7 +872,25 @@ document.getElementById('selAll').addEventListener('click', () => { document.que
 document.getElementById('selNone').addEventListener('click', () => { document.querySelectorAll('#seriesFilter input').forEach(i => { i.checked = false; }); activeSeries.clear(); render(); });
 
 // 옵션 팝업
-function openPanel(o) { document.getElementById('panel').classList.toggle('open', o); document.getElementById('backdrop').classList.toggle('open', o); }
+function openPanel(o) {
+  const panel = document.getElementById('panel');
+  if (o) {
+    const gear = document.getElementById('gearBtn');
+    const r = gear.getBoundingClientRect();
+    const gap = 6;
+    const margin = 12;
+    const panelWidth = Math.min(window.innerWidth - margin * 2, window.innerWidth <= 560 ? 360 : 380);
+    const right = Math.max(margin, Math.min(window.innerWidth - r.right, window.innerWidth - panelWidth - margin));
+    panel.style.top = (r.bottom + 4) + 'px';
+    panel.style.right = right + 'px';
+    panel.style.left = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.width = window.innerWidth <= 560 ? `calc(100vw - ${margin * 2}px)` : '';
+    panel.style.maxHeight = `calc(100vh - ${r.bottom + gap + margin}px)`;
+  }
+  panel.classList.toggle('open', o);
+  document.getElementById('backdrop').classList.toggle('open', o);
+}
 document.getElementById('gearBtn').addEventListener('click', () => openPanel(!document.getElementById('panel').classList.contains('open')));
 document.getElementById('backdrop').addEventListener('click', () => openPanel(false));
 
