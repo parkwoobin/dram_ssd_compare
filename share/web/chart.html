@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3DMark Graphics Score</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  :root {
+    --page:#161a20; --panel:#1d232c; --panel-2:#262e3a; --text:#e8eaed; --text-dim:#9aa6b4;
+    --border:#323b48; --accent:#3b82f6; --accent-2:#60a5fa;
+    --font:"Pretendard",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  }
+  body.light {
+    --page:#dbe2ec; --panel:#ffffff; --panel-2:#eaeef4; --text:#1b2330; --text-dim:#5a6573;
+    --border:#c5cdd8; --accent:#2563eb; --accent-2:#3b82f6;
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { background:var(--page); color:var(--text); font-family:var(--font); font-size:14px; overflow:hidden; display:flex; flex-direction:column; }
+
+  header { display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--page); flex-wrap:wrap; }
+  .hleft { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .hright { display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .searchbox { position:relative; display:inline-flex; align-items:center; }
+  #search { width:150px; padding-right:26px; }
+  .searchclear { position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent;
+                 color:var(--text-dim); cursor:pointer; font-size:12px; line-height:1; padding:2px; display:none; }
+  .searchbox.has-text .searchclear { display:block; }
+  .searchclear:hover { color:var(--text); }
+  .sheet-handle { display:none; }
+  /* 상단바 컨트롤 크기 균일(높이 36px) */
+  header select, header input[type=text], header button, header .tab { height:36px; box-sizing:border-box; }
+  header .tab { display:inline-flex; align-items:center; font-size:13px; }
+  header .searchclear { height:auto; }
+  h1 { font-size:16px; font-weight:800; margin:0; color:var(--accent-2); }
+  .tabs { display:flex; gap:6px; }
+  .tab { padding:6px 14px; border:1px solid var(--border); border-radius:8px; background:var(--panel-2); color:var(--text-dim); cursor:pointer; font-weight:700; }
+  .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  select,input[type=text] { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 10px; font-family:var(--font); font-size:13px; }
+  input[type=color] { width:30px; height:28px; border:1px solid var(--border); border-radius:6px; background:none; padding:0; cursor:pointer; }
+  button { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer; font-family:var(--font); font-weight:700; font-size:13px; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.icon { width:36px; height:36px; padding:0; font-size:17px; display:flex; align-items:center; justify-content:center; }
+  #distBtn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  /* 분포 변수 조절 임시 팝업 */
+  #distTune { position:fixed; top:58px; left:12px; z-index:55; width:230px; background:var(--panel);
+              border:1px solid var(--border); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+              padding:10px 12px; display:none; font-size:12px; color:var(--text); }
+  #distTune .dt-head { font-weight:800; margin-bottom:6px; display:flex; justify-content:space-between; }
+  #distTune .dt-row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  #distTune .dt-l { flex:0 0 86px; color:var(--text-dim); }
+  #distTune .dt-row input[type=range] { flex:1; min-width:0; accent-color:var(--accent); }
+  #distTune .dt-v { flex:0 0 40px; text-align:right; font-variant-numeric:tabular-nums; }
+  #distTune .dt-reset { cursor:pointer; color:var(--accent-2); font-weight:700; }
+
+  main { position:relative; flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; background:var(--page); }
+  /* 폭에 맞춰 스케일(좌우), 높이가 넘치면 세로 스크롤. 외곽 여백 최소 */
+  #scaleWrap { margin:4px auto; position:relative; }
+  #stage { position:absolute; top:0; left:0; transform-origin:top left; will-change:transform; }
+  #chart { width:100%; height:100%; }
+  /* 비교(선택) 모드 하단 바 */
+  #cmpBar { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); display:none; align-items:center; gap:12px;
+            background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:0 12px 36px rgba(0,0,0,.5);
+            padding:10px 14px; z-index:60; }
+  #cmpBar.open { display:flex; }
+  #cmpBar .msg { color:var(--text); font-weight:700; font-size:13px; }
+
+  /* 옵션 팝업 */
+  #backdrop { position:fixed; inset:0; background:transparent; display:none; z-index:40; }   /* 딤 처리 없음(클릭 닫기용) */
+  #panel { position:fixed; top:58px; right:14px; width:380px; max-width:calc(100vw - 24px); max-height:calc(100vh - 72px); overflow:auto;
+           background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,.5), 0 0 0 1px var(--border);
+           padding:16px; display:none; z-index:50; }
+  #panel.open, #backdrop.open { display:block; }
+  .optrow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:11px 0; }
+  .optrow > .lbl { color:var(--text-dim); font-weight:700; min-width:48px; }
+  .ck { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+  .ck input { accent-color:var(--accent); width:16px; height:16px; }
+  .swlbl { color:var(--text-dim); font-size:12px; font-weight:600; }
+  .swlbl.act { color:var(--accent-2); }
+  /* 슬라이드 스위치 */
+  .sw { position:relative; width:46px; height:24px; display:inline-block; flex:0 0 auto; }
+  .sw input { opacity:0; width:0; height:0; }
+  .sw i { position:absolute; inset:0; background:var(--panel-2); border:1px solid var(--border); border-radius:999px; transition:.2s; }
+  .sw i:before { content:""; position:absolute; width:18px; height:18px; left:3px; top:2px; border-radius:50%; background:var(--text-dim); transition:.2s; }
+  .sw input:checked + i { background:var(--accent); border-color:var(--accent); }
+  .sw input:checked + i:before { left:25px; background:#fff; }
+  .pick { display:inline-flex; align-items:center; gap:5px; }
+  .pick .hex { width:80px; }
+  .series-filter { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .chip { display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border:1px solid var(--border); border-radius:999px; background:var(--panel-2); cursor:pointer; user-select:none; font-size:12px; }
+  .chip input { accent-color:var(--accent); }
+  .chip .dot { width:10px; height:10px; border-radius:50%; }
+  .count-badge { color:var(--text-dim); font-size:12px; }
+  .phead { font-weight:800; font-size:15px; margin:0 0 4px; }
+  hr.psep { border:none; border-top:1px solid var(--border); margin:12px 0; }
+  @media (max-width:560px){
+    #panel { top:auto; bottom:0; right:0; left:0; width:100%; max-width:100%; border-radius:16px 16px 0 0; max-height:80vh; }
+    .sheet-handle { display:block; width:42px; height:4px; border-radius:2px; background:var(--border); margin:2px auto 12px; }
+    #search { width:120px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hleft">
+    <h1>3DMark</h1>
+    <select id="bench"></select>
+    <div class="tabs">
+      <div class="tab active" data-kind="desktop">데스크탑</div>
+      <div class="tab" data-kind="laptop">노트북</div>
+    </div>
+  </div>
+  <div class="hright">
+    <button id="distBtn" title="성능 분포(스팀 점유율)">성능분포</button>
+    <div class="searchbox">
+      <input type="text" id="search" placeholder="검색">
+      <button id="searchClear" class="searchclear" title="지우기">✕</button>
+    </div>
+    <button class="icon" id="themeBtn" title="다크/라이트 전환">🌙</button>
+    <button class="icon" id="gearBtn" title="옵션">⚙</button>
+    <button class="primary" id="exportBtn">PNG 내보내기</button>
+  </div>
+</header>
+
+<main><div id="scaleWrap"><div id="stage"><div id="chart"></div></div></div></main>
+
+<div id="backdrop"></div>
+<aside id="panel">
+  <div class="sheet-handle"></div>
+  <p class="phead">옵션</p>
+  <div class="optrow">
+    <span class="lbl">묶기</span>
+    <label class="ck"><input type="checkbox" id="byGen" checked> 세대별</label>
+    <label class="ck"><input type="checkbox" id="byVendor"> 제조사별</label>
+  </div>
+  <div class="optrow">
+    <span class="lbl">세대</span>
+    <span class="swlbl act" id="genRevL0">정순</span>
+    <label class="sw"><input type="checkbox" id="genRev"><i></i></label>
+    <span class="swlbl" id="genRevL1">역순</span>
+  </div>
+  <div class="optrow">
+    <span class="lbl">점수</span>
+    <span class="swlbl act" id="dirL0">낮은→높은</span>
+    <label class="sw"><input type="checkbox" id="dir"><i></i></label>
+    <span class="swlbl" id="dirL1">높은→낮은</span>
+  </div>
+  <div class="optrow">
+    <span class="lbl">방향</span>
+    <span class="swlbl act" id="orientL0">세로 막대</span>
+    <label class="sw"><input type="checkbox" id="orient"><i></i></label>
+    <span class="swlbl" id="orientL1">가로 막대</span>
+  </div>
+  <div class="optrow">
+    <span class="lbl">비교</span>
+    <span class="swlbl act" id="cmpL0">전체</span>
+    <label class="sw"><input type="checkbox" id="compare"><i></i></label>
+    <span class="swlbl" id="cmpL1">GPU 선택</span>
+  </div>
+  <!-- COLOR-UI -->
+  <!-- 색상 조절 UI: 현재 숨김(display:none). 다시 쓰려면 아래 div 의 style 만 제거 -->
+  <div id="colorBox" style="display:none">
+    <hr class="psep">
+    <div class="optrow">
+      <span class="lbl">색상</span>
+      <button id="cReset">기본</button>
+      <span class="pick">배경 <input type="color" id="cBg"><input type="text" class="hex" id="cBgHex"></span>
+    </div>
+    <div class="optrow">
+      <span class="pick">NVIDIA <input type="color" id="cNv"><input type="text" class="hex" id="cNvHex"></span>
+      <span class="pick">AMD <input type="color" id="cAm"><input type="text" class="hex" id="cAmHex"></span>
+      <span class="pick">Intel <input type="color" id="cIn"><input type="text" class="hex" id="cInHex"></span>
+    </div>
+  </div>
+  <!-- /COLOR-UI -->
+  <hr class="psep">
+  <div class="optrow">
+    <span class="lbl">시리즈</span>
+    <button id="selAll">전체</button><button id="selNone">해제</button>
+    <span class="count-badge" id="shown"></span>
+  </div>
+  <div class="series-filter" id="seriesFilter"></div>
+</aside>
+
+<div id="cmpBar">
+  <span class="msg" id="cmpMsg">비교할 GPU 막대를 클릭하세요</span>
+  <button id="cmpCancel">취소</button>
+  <button class="primary" id="cmpOk">확인</button>
+</div>
+
+<script src="chart_data.js"></script>
+<script>
+/* ===================== CONFIG ===================== */
+const CONFIG = {
+  maker: "표 제작 : 궁금",
+  watermark: "궁금",
+  pngLong: 8000,
+  barSpacing: 14, barW: 9,                                  // 막대 간격/두께 (chart_old 기준)
+  plotHV: 900, plotWH: 1400,                                // 고정 내부 렌더 크기(막대 일정)
+  fitPad: 6, maxScale: 1.6,                                 // 폭 맞춤(여백 최소 / 최대확대)
+  gridLeftV: 58, gridRightV: 26, gridTopV: 66,
+  modelLabelFont: 12, groupLabelFont: 13, scoreLabelFont: 12, watermarkFont: 300,
+  colors: { bg: "#2f2f2f", nvidia: "#8bc34a", amd: "#ef4d56", intel: "#5b9bd5" },  // 기본값(사용자 설정)
+  groups: {
+    desktop: [
+      ["내장 그래픽", ["iGPU"]],
+      ["RX 500 & GTX 10", ["RX 500", "RX VEGA", "GTX 10"]],
+      ["RX 5000 & GTX 16 & RTX 20", ["RX 5000", "GTX 16", "RTX 20"]],
+      ["RX 6000 & RTX 30", ["RX 6000", "RTX 30"]],
+      ["RX 7000 & RTX 40 & Arc A", ["RX 7000", "RTX 40", "Arc A"]],
+      ["RX 9000 & RTX 50 & Arc B", ["RX 9000", "RTX 50", "Arc B"]],
+    ],
+    laptop: [
+      ["내장 그래픽", ["Radeon iGPU", "Intel Arc"]],
+      ["GTX 10", ["GTX 10"]],
+      ["GTX 16 & RTX 20", ["GTX 16", "RTX 20"]],
+      ["RTX 30", ["RTX 30"]],
+      ["RTX 40", ["RTX 40"]],
+      ["RTX 50", ["RTX 50"]],
+    ],
+  },
+};
+// 테마별 색상 기본값(배경 + 제조사 막대). 색상 조절 UI는 숨김이라 항상 이 값을 따른다.
+const THEME_COLORS = {
+  dark:  { bg: "#252a31", nvidia: "#a3e656", amd: "#F24545", intel: "#56ABF0" },
+  light: { bg: "#F0F4F8", nvidia: "#76cb15", amd: "#e85454", intel: "#4ca6f0" },
+};
+const VENDOR_LABEL = { nvidia: "NVIDIA", amd: "AMD", intel: "Intel" };
+const VENDOR_ORDER = ["intel", "amd", "nvidia"];
+const SERIES_DISP = { "iGPU": "iGPU", "Radeon iGPU": "Radeon iGPU", "Intel Arc": "Arc iGPU" };
+
+/* 스팀 하드웨어 통계(데스크탑 GPU MAY 점유율 %) — 성능 분포 히스토그램용 스냅샷 */
+const STEAM_SHARE = {
+  "RTX 3060": 4.02, "RTX 4060": 3.74, "RTX 3050": 3.28, "RTX 5070": 3.09, "GTX 1650": 2.70,
+  "RTX 5060": 2.58, "RTX 4060 Ti": 2.45, "RTX 3060 Ti": 2.27, "RTX 3070": 2.08, "RTX 5060 Ti": 2.06,
+  "RTX 4070": 1.81, "RTX 2060": 1.77, "RTX 5070 Ti": 1.73, "GTX 1060": 1.59, "GTX 1660 SUPER": 1.52,
+  "RTX 4070 SUPER": 1.52, "RTX 5080": 1.47, "RTX 3080": 1.47, "RX 7800 XT": 1.33, "GTX 1050 Ti": 1.26,
+  "RTX 4070 Ti": 0.98, "RTX 3070 Ti": 0.97, "GTX 1660 Ti": 0.95, "RX 6600": 0.90, "RX 7600 XT": 0.84,
+  "RTX 2060 SUPER": 0.81, "RTX 4070 Ti SUPER": 0.78, "RTX 4090": 0.76, "RTX 2070 SUPER": 0.73,
+  "RTX 4080": 0.69, "RTX 4080 SUPER": 0.67, "GTX 1070": 0.66, "RX 580": 0.60, "GTX 1050": 0.59,
+  "RX 580 2048SP": 0.59, "RX 6700 XT": 0.58, "RTX 3080 Ti": 0.58, "RX 5700 XT": 0.57, "GTX 1660": 0.50,
+  "RTX 2050": 0.50, "RTX 2070": 0.47, "RX 7900 XTX": 0.45, "RTX 5090": 0.43, "GTX 1080": 0.43,
+  "GTX 1650 Ti": 0.40, "RTX 3090": 0.39, "RX 570": 0.38, "GTX 1080 Ti": 0.32, "GTX 1650 SUPER": 0.30,
+  "RX 6600 XT": 0.30, "RX 6650 XT": 0.27, "RX 6750 XT": 0.27, "RTX 2080 SUPER": 0.27, "RX 7700 XT": 0.26,
+  "RTX 2080": 0.24, "RX 6800 XT": 0.24, "GT 1030": 0.23, "RTX 2080 Ti": 0.23, "RX 550": 0.22,
+  "GTX 1070 Ti": 0.21, "RX 6500 XT": 0.20, "GTX 970": 0.20, "RTX 5050": 0.19, "RX 9070": 0.18,
+  "GTX 750 Ti": 0.18, "GTX 960": 0.18, "RX 6800": 0.17, "RX 6900 XT": 0.17, "GT 730": 0.17,
+};
+
+/* 성능 분포 곡선/라벨 조절 변수 — 임시 조절 팝업에서 실시간 변경 */
+const DIST = {
+  bins: 21,        // 기준 윈도/눈금 수 (niceInterval target)
+  smooth: 0.6,     // 표시 곡선 스무딩 강도 (h = win*smooth)
+  detectBw: 0.45,  // 라벨 검출 대역폭 (h2 = win*detectBw)
+  thresh: 0.012,   // 봉우리 검출 임계 (전체 최댓값 대비)
+  peakWin: 0.05,   // 봉우리에서 떨어진 정도 (대표 후보 ±범위)
+  shareTol: 0.95,  // 점유율 비슷 판단 (이 비율↑이면 봉우리에 더 가까운 카드)
+  minGap: 0.05,    // 라벨 최소 간격 (xmax 대비)
+  tipPct: 0.04,    // 툴팁 비슷한 카드 ±%
+};
+
+const DATA = window.CHART_DATA;
+const FONT = '"Pretendard", system-ui, sans-serif';
+const fmt = n => (n == null ? "" : String(n));
+
+let kind = "desktop";
+let bench = Object.keys(DATA.desktop)[0] || "timespy";
+let orientation = "vertical";
+let theme = (localStorage.getItem('3dmark_theme') || 'dark');
+let activeSeries = new Set();
+let distMode = false;           // 성능 분포(히스토그램) 모드
+let selecting = false;          // 비교 선택 진행 중
+let compareSet = null;          // 확정된 비교 대상(Set of key) — null 이면 비교 안 함
+const pendingSel = new Set();   // 선택 중인 대상 key
+let prevOrientation = null;     // 비교 모드 진입 전 막대 방향(복원용)
+const keyOf = r => (r.series + "" + r.model);
+let COL = { ...THEME_COLORS[theme] };   // 색상은 테마 기본값을 따른다
+function saveColors() { try { localStorage.setItem('3dmark_colors', JSON.stringify(COL)); } catch (e) {} }
+
+const el = document.getElementById('chart');
+const stage = document.getElementById('stage');
+const scaleWrap = document.getElementById('scaleWrap');
+const mainEl = document.querySelector('main');
+const chart = echarts.init(el, null, { renderer: 'canvas', devicePixelRatio: Math.max(2, window.devicePixelRatio || 1) });
+const _mc = document.createElement('canvas').getContext('2d');
+const meas = (t, w, s) => { _mc.font = `${w} ${s}px ${FONT}`; return _mc.measureText(t).width; };
+
+function rows() { return (DATA[kind] && DATA[kind][bench]) ? DATA[kind][bench] : []; }
+function benchTitle() { return (DATA.benchmarks && DATA.benchmarks[bench]) || bench; }
+function dateStr() {
+  const d = DATA.dates && DATA.dates[kind] && DATA.dates[kind][bench];
+  return d || (DATA.generated || "").slice(0, 10).replace(/-/g, ".");
+}
+function pal() {
+  return theme === 'light'
+    ? { sub: "#555", grid: "#d6d6d6", minor: "rgba(0,0,0,0.06)", axis: "#b3b3b3", title: "#111", wm: "rgba(0,0,0,0.05)", score: "#222", group: "#333", div: "rgba(0,0,0,0.20)" }
+    : { sub: "#b0b0b0", grid: "#4d4d4d", minor: "rgba(255,255,255,0.07)", axis: "#5a5a5a", title: "#fff", wm: "rgba(255,255,255,0.05)", score: "#ececec", group: "#e6e6e6", div: "rgba(255,255,255,0.20)" };
+}
+
+function vendorOf(r) {
+  const s = r.series;
+  if (/^(GTX|RTX)/.test(s)) return "nvidia";
+  if (/^RX|VEGA/.test(s)) return "amd";
+  if (/Arc/.test(s)) return "intel";
+  if (/Arc|Ultra/i.test(r.model)) return "intel";
+  return "amd";
+}
+const colorOf = r => COL[vendorOf(r)];
+function displayName(r) {
+  const p = r.series.split(' ')[0], m = r.model;
+  if (p === "Arc") return `Arc ${m}`;
+  if (/^\d/.test(m) && ["RTX", "GTX", "RX"].includes(p)) return `${p} ${m}`;
+  return m;
+}
+
+/* 적응형 제목: 좁아지면 점점 짧게 */
+function fitTitle(name, avail) {
+  const variants = [`${name} : Average Graphics Score`, `${name} : Avg Graphics Score`, `${name} : Graphics Score`, name];
+  for (const v of variants) if (meas(v, 800, 23) <= avail) return v;
+  return name;
+}
+
+/* ---------- UI 빌드 ---------- */
+function buildBenchSelect() {
+  const sel = document.getElementById('bench');
+  const avail = Object.keys(DATA[kind] || {});
+  sel.innerHTML = "";
+  for (const b of avail) {
+    const o = document.createElement('option');
+    o.value = b; o.textContent = (DATA.benchmarks && DATA.benchmarks[b]) || b;
+    sel.appendChild(o);
+  }
+  if (!avail.includes(bench)) bench = avail[0];
+  sel.value = bench;
+}
+function buildSeriesFilter() {
+  const seen = [];
+  for (const r of rows()) if (!seen.includes(r.series)) seen.push(r.series);
+  activeSeries = new Set(seen);
+  const box = document.getElementById('seriesFilter');
+  box.innerHTML = "";
+  for (const s of seen) {
+    const sample = rows().find(r => r.series === s);
+    const chip = document.createElement('label');
+    chip.className = "chip";
+    chip.innerHTML = `<input type="checkbox" checked data-s="${s}"><span class="dot" style="background:${colorOf(sample)}"></span>${s}`;
+    chip.querySelector('input').addEventListener('change', e => {
+      if (e.target.checked) activeSeries.add(s); else activeSeries.delete(s);
+      render();
+    });
+    box.appendChild(chip);
+  }
+}
+function refreshChips() {
+  document.querySelectorAll('#seriesFilter .chip').forEach(chip => {
+    const s = chip.querySelector('input').dataset.s, sample = rows().find(r => r.series === s);
+    if (sample) chip.querySelector('.dot').style.background = colorOf(sample);
+  });
+}
+
+function filtered() {
+  let out = rows().filter(r => activeSeries.has(r.series));
+  if (compareSet) out = out.filter(r => compareSet.has(keyOf(r)));   // 확정된 비교 선택만
+  return out;
+}
+
+function buildGroups() {
+  const data = filtered();
+  // 비교 그래프(확정): 세대/제조사 구분 없이 점수 낮은→높은만
+  if (compareSet) return [{ label: "", rows: data.slice().sort((a, b) => a.score - b.score) }];
+  let byGen, byVendor, dir, genRev;
+  if (selecting) {                 // 선택창: 세대별 + 제조사별 + 점수 낮은→높은
+    byGen = true; byVendor = true; dir = 1; genRev = false;
+  } else {                         // 일반: 사용자 토글 그대로
+    byGen = document.getElementById('byGen').checked;
+    byVendor = document.getElementById('byVendor').checked;
+    dir = document.getElementById('dir').checked ? -1 : 1;
+    genRev = document.getElementById('genRev').checked;
+  }
+  const byScore = (a, b) => dir * (a.score - b.score);
+
+  if (byGen) {
+    const cmp = byVendor
+      ? (a, b) => (VENDOR_ORDER.indexOf(vendorOf(a)) - VENDOR_ORDER.indexOf(vendorOf(b))) || byScore(a, b)
+      : byScore;
+    const groups = [];
+    for (const [, sl] of CONFIG.groups[kind]) {
+      const g = data.filter(r => sl.includes(r.series)).sort(cmp);
+      if (!g.length) continue;
+      const present = sl.filter(s => g.some(r => r.series === s));
+      groups.push({ label: present.map(s => SERIES_DISP[s] || s).join(" & "), rows: g });
+    }
+    if (genRev) groups.reverse();
+    return groups;
+  }
+  if (byVendor) {
+    const groups = [];
+    for (const v of VENDOR_ORDER) {
+      const g = data.filter(r => vendorOf(r) === v).sort(byScore);
+      if (g.length) groups.push({ label: VENDOR_LABEL[v], rows: g });
+    }
+    return groups;
+  }
+  return [{ label: "", rows: data.slice().sort(byScore) }];
+}
+
+function layout() {
+  const groups = buildGroups();
+  const items = [], bounds = [];
+  items.push(null);
+  let first = true;
+  for (const g of groups) {
+    if (!first) items.push(null);
+    first = false;
+    const start = items.length;
+    g.rows.forEach(r => items.push(r));
+    bounds.push({ label: g.label, start, end: items.length - 1 });
+  }
+  items.push(null);
+  return { items, bounds };
+}
+function niceMax(v) { return Math.ceil((v * 1.15) / 1000) * 1000; }   // 최고점 +15%, 1000 단위
+function niceInterval(maxv, target) {   // 눈금 간격: 대략 target 개가 되도록 1/2/2.5/5 단위로
+  const rough = maxv / target;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  let best = pow;
+  for (const c of [1, 2, 2.5, 5, 10]) { const v = c * pow; if (Math.abs(v - rough) < Math.abs(best - rough)) best = v; }
+  return best;
+}
+
+/* ===== 성능 분포 히스토그램 (스팀 점유율 × 벤치 점수) ===== */
+// 매칭용 공통 키: 제조사/패밀리·VRAM·메모리종류 제거, SUPER→S
+function coreKey(s) {
+  s = (s || "").toUpperCase();
+  s = s.replace(/\b(NVIDIA|GEFORCE|AMD|RADEON|RTX|GTX|RX)\b/g, " ");
+  s = s.replace(/\b(D4|D5|D6X|D6)\b/g, " ");
+  s = s.replace(/\b\d+G(\/\d+G)*\b/g, " ");
+  s = s.replace(/\bSUPER\b/g, "S");
+  return s.replace(/\s+/g, " ").trim();
+}
+function distData() {
+  const rows = (DATA.desktop && DATA.desktop[bench]) || [];
+  const byCore = {};                          // coreKey → [score...] (VRAM 변종 평균용)
+  for (const r of rows) {
+    if (r.score == null) continue;
+    const k = coreKey(r.model);
+    (byCore[k] = byCore[k] || []).push(r.score);
+  }
+  const matched = [];
+  for (const name in STEAM_SHARE) {
+    const arr = byCore[coreKey(name)];        // 벤치에 없으면 제외
+    if (!arr || !arr.length) continue;
+    matched.push({ name, score: arr.reduce((a, b) => a + b, 0) / arr.length, share: STEAM_SHARE[name] });
+  }
+  const tot = matched.reduce((a, m) => a + m.share, 0) || 1;
+  matched.forEach(m => m.pct = m.share / tot * 100);   // 겹치는 모델 합계를 100%로 재정규화
+  return matched;
+}
+// 가우시안 커널 밀도(KDE)로 부드러운 분포 곡선. x 는 연속 점수축(세분화).
+function distCurve(matched) {
+  const maxS = Math.max(...matched.map(m => m.score));
+  const win = niceInterval(maxS, DIST.bins) || 1000; // 기준 윈도(%) — 막대 스케일 유지용
+  const h = win * DIST.smooth;                        // 대역폭(곡선 매끄러움)
+  const norm = 1 / (h * Math.sqrt(2 * Math.PI));
+  const xmax = Math.ceil(maxS / 2000) * 2000, grid = 200, step = xmax / grid;
+  const pts = [];
+  for (let i = 0; i <= grid; i++) {
+    const x = i * step;
+    let f = 0;
+    for (const m of matched) { const z = (x - m.score) / h; f += m.pct * Math.exp(-0.5 * z * z); }
+    pts.push([x, +(f * norm * win).toFixed(3)]);     // 밀도×윈도 = %/윈도 (기존과 유사 스케일)
+  }
+  return { pts, xmax, win };
+}
+function curveYAt(pts, x) {                  // 곡선 위 임의 점수의 y(선형 보간)
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i][0] >= x) {
+      const a = pts[i - 1], b = pts[i];
+      return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0] || 1);
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+// 봉우리 + 턱(서브클러스터) 검출: 표시 곡선보다 좁은 대역폭의 KDE 극대점을 찾는다.
+function featureXs(matched, win, xmax) {
+  const h2 = win * DIST.detectBw, norm = 1 / (h2 * Math.sqrt(2 * Math.PI));
+  const grid = 500, step = xmax / grid, ys = [];
+  for (let i = 0; i <= grid; i++) {
+    const x = i * step; let f = 0;
+    for (const m of matched) { const z = (x - m.score) / h2; f += m.share * Math.exp(-0.5 * z * z); }
+    ys.push(f * norm);
+  }
+  const mY = Math.max(...ys), out = [], w = 4;
+  for (let i = 1; i < grid; i++) {        // 양 끝까지 스캔(끝에 몰린 고급 카드 누락 방지)
+    if (ys[i] < mY * DIST.thresh) continue;   // 고립된 고급 카드(낮은 봉우리)도 포함
+    let top = ys[i] >= ys[i - 1] && ys[i] > ys[i + 1];
+    for (let k = 1; k <= w && top; k++) {
+      if (i - k >= 0 && ys[i] < ys[i - k]) top = false;
+      if (i + k <= grid && ys[i] < ys[i + k]) top = false;
+    }
+    if (top) out.push(i * step);
+  }
+  return out;
+}
+function renderDist() {
+  const P = pal();
+  const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#3b82f6').trim();
+  const W = 1500, H = 850;
+  curW = W; curH = H;
+  stage.style.width = W + "px"; stage.style.height = H + "px";
+  chart.resize();
+  const title = [{ text: benchTitle() + " : Performance distribution", left: "center", top: 16,
+                   textStyle: { color: P.title, fontSize: 23, fontWeight: 800 } }];
+  const matched = distData();
+  if (!matched.length) {
+    chart.setOption({ backgroundColor: COL.bg, textStyle: { fontFamily: FONT }, title,
+      xAxis: { show: false }, yAxis: { show: false }, series: [], graphic: [] }, true);
+    fit(); return;
+  }
+  const c = distCurve(matched);
+  // 봉우리(곡선 극대점)마다 그 구간에서 점유율 가장 높은 GPU 1개를 대표로 표시
+  const peaks = [];
+  {
+    const cands = [], seen = new Set();
+    for (const X of featureXs(matched, c.win, c.xmax)) {
+      const near = matched.filter(m => Math.abs(m.score - X) <= X * DIST.peakWin);
+      if (!near.length) continue;
+      // 점유율 최고를 기본으로, 점유율이 비슷하면 봉우리에 더 가까운 카드 선택
+      const maxShare = Math.max(...near.map(m => m.share));
+      const tied = near.filter(m => m.share >= maxShare * DIST.shareTol);
+      const rep = tied.reduce((a, m) => Math.abs(m.score - X) < Math.abs(a.score - X) ? m : a);
+      if (!seen.has(rep.name)) { seen.add(rep.name); cands.push(rep); }
+    }
+    cands.sort((a, b) => a.score - b.score);
+    const minGap = c.xmax * DIST.minGap;           // 라벨 과밀 방지(가까우면 점유율 높은 쪽만)
+    for (const r of cands) {
+      const prev = peaks[peaks.length - 1];
+      if (prev && r.score - prev.score < minGap) {
+        if (r.share > prev.share) peaks[peaks.length - 1] = { name: r.name, score: r.score, share: r.share, coord: [r.score, curveYAt(c.pts, r.score)] };
+        continue;
+      }
+      peaks.push({ name: r.name, score: r.score, share: r.share, coord: [r.score, curveYAt(c.pts, r.score)] });
+    }
+  }
+  chart.setOption({
+    animation: false, backgroundColor: COL.bg, textStyle: { fontFamily: FONT }, title,
+    grid: { left: 66, right: 36, top: 70, bottom: 56 },
+    tooltip: { trigger: "axis", formatter: ps => {
+      const x = ps[0].value[0], pct = (+ps[0].value[1]).toFixed(2);
+      let s = `${Math.round(x).toLocaleString()} 점 · <b>${pct}%</b>`;
+      const near = ((DATA.desktop && DATA.desktop[bench]) || [])      // 비슷한 성능대(±4%)
+        .filter(r => r.score != null && Math.abs(r.score - x) <= x * DIST.tipPct)
+        .sort((a, b) => b.score - a.score);
+      if (near.length) {
+        const list = near.slice(0, 12).map(r =>
+          `<div style="display:flex;justify-content:space-between;gap:18px"><span>${displayName(r)}</span><b>${r.score.toLocaleString()}</b></div>`).join("")
+           + (near.length > 12 ? `<div>… 외 ${near.length - 12}개</div>` : "");
+        s += '<hr style="margin:5px 0;border:0;border-top:1px solid rgba(128,128,128,.35)">'
+           + `<div style="font-size:11px;min-width:160px">${list}</div>`;
+      }
+      return s; } },
+    xAxis: { type: "value", min: 0, max: c.xmax, interval: 2000,
+      axisTick: { show: false }, axisLine: { lineStyle: { color: P.axis } },
+      axisLabel: { color: P.sub, fontSize: 12, formatter: v => v >= 1000 ? (v / 1000) + "k" : "" + v },
+      splitLine: { lineStyle: { color: P.grid } } },
+    yAxis: { type: "value", min: 0,
+      axisLabel: { color: P.sub, fontSize: 12, formatter: "{value}%" },
+      splitLine: { lineStyle: { color: P.grid } }, axisLine: { show: true, lineStyle: { color: P.axis } } },
+    series: [{ type: "line", smooth: true, symbol: "none", data: c.pts,
+      lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent },
+      areaStyle: { color: accent, opacity: 0.22 },
+      markPoint: { symbol: "circle", symbolSize: 6, itemStyle: { color: accent }, silent: true,
+        label: { show: true, position: "top", distance: 7, color: P.title, fontSize: 11, fontWeight: 600,
+                 formatter: p => p.name }, data: peaks } }],
+  }, true);
+  fit();
+}
+
+/* 분포 변수 조절 임시 팝업 */
+const DT_CTRLS = [
+  ["smooth", "스무딩", 0.2, 1.5, 0.05], ["detectBw", "라벨대역폭", 0.2, 1.0, 0.05],
+  ["peakWin", "봉우리거리", 0.02, 0.2, 0.005], ["shareTol", "점유율비슷", 0.5, 1.0, 0.05],
+  ["minGap", "라벨간격", 0.01, 0.15, 0.005], ["thresh", "봉우리임계", 0.002, 0.05, 0.002],
+  ["bins", "눈금수", 8, 30, 1], ["tipPct", "툴팁±%", 0.01, 0.1, 0.005],
+];
+const DIST_DEF = { ...DIST };
+function buildDistTune() {
+  const box = document.createElement("div"); box.id = "distTune";
+  const head = document.createElement("div"); head.className = "dt-head";
+  head.innerHTML = '<span>분포 변수 (임시)</span><span class="dt-reset" id="dtReset">기본값</span>';
+  box.appendChild(head);
+  const vsp = {};
+  for (const [key, label, min, max, step] of DT_CTRLS) {
+    const row = document.createElement("label"); row.className = "dt-row";
+    const l = document.createElement("span"); l.className = "dt-l"; l.textContent = label;
+    const r = document.createElement("input"); r.type = "range"; r.min = min; r.max = max; r.step = step;
+    r.value = DIST[key]; r.dataset.k = key;
+    const v = document.createElement("span"); v.className = "dt-v"; v.textContent = DIST[key]; vsp[key] = v;
+    r.addEventListener("input", () => { DIST[key] = parseFloat(r.value); v.textContent = r.value; if (distMode) render(); });
+    row.append(l, r, v); box.appendChild(row);
+  }
+  document.body.appendChild(box);
+  box.querySelector("#dtReset").addEventListener("click", () => {
+    Object.assign(DIST, DIST_DEF);
+    box.querySelectorAll("input[type=range]").forEach(r => { r.value = DIST[r.dataset.k]; vsp[r.dataset.k].textContent = DIST[r.dataset.k]; });
+    if (distMode) render();
+  });
+  return box;
+}
+
+/* ---------- 렌더 (고정 크기로 그리고, 보이기는 창에 맞춰 스케일) ---------- */
+let LAST = null, curW = 0, curH = 0;
+function render() {
+  if (distMode) { renderDist(); return; }   // 성능 분포 모드
+  const { items, bounds } = layout();
+  const real = items.filter(Boolean);
+  document.getElementById('shown').textContent = real.length + "개";
+  if (!real.length) { chart.clear(); return; }
+
+  const horiz = orientation === "horizontal";
+  const cmp = selecting || !!compareSet;   // 비교 모드: 그룹명/워터마크 숨김
+  const P = pal();
+  const yMax = niceMax(Math.max(...real.map(r => r.score)));
+  let modelMax = 0;
+  for (const r of real) modelMax = Math.max(modelMax, meas(r.model, 700, CONFIG.modelLabelFont));
+
+  // 내부 렌더 크기는 고정(막대 크기 일정) → 막대 개수에 따라 캔버스 크기만 결정
+  let gridLeft, gridRight, gridTop, gridBottom, W, H;
+  if (!horiz) {
+    gridLeft = CONFIG.gridLeftV; gridRight = CONFIG.gridRightV; gridTop = CONFIG.gridTopV;
+    gridBottom = 14 + modelMax + 16 + (cmp ? 8 : CONFIG.groupLabelFont + 14);   // 비교 모드: 그룹명 공간 제거
+    W = gridLeft + items.length * CONFIG.barSpacing + gridRight;
+    H = gridTop + CONFIG.plotHV + gridBottom;
+  } else {
+    gridTop = CONFIG.gridTopV + 26; gridBottom = 50;
+    gridLeft = modelMax + (cmp ? 14 : CONFIG.groupLabelFont + 46); gridRight = 70;   // 비교 모드: 그룹명 공간 제거
+    H = gridTop + items.length * CONFIG.barSpacing + gridBottom;
+    W = gridLeft + CONFIG.plotWH + gridRight;
+  }
+  const barWidth = CONFIG.barW;
+  curW = W; curH = H;
+  stage.style.width = W + "px"; stage.style.height = H + "px";
+  chart.resize();
+
+  const q = (document.getElementById('search').value || "").trim().toLowerCase();   // 검색: 형태 유지, 비매칭 흐리게
+  const cats = items.map(r => r ? r.model : "");
+  const vals = items.map(r => {
+    if (!r) return { value: null };
+    const st = { color: colorOf(r) };
+    if (selecting) st.opacity = pendingSel.has(keyOf(r)) ? 1 : 0.15;            // 선택 중: 고른 막대만 밝게
+    else if (q && !(r.model + " " + r.series).toLowerCase().includes(q)) st.opacity = 0.15;  // 검색 비매칭 흐리게
+    return { value: r.score, itemStyle: st, _r: r };
+  });
+
+  // 적응형 제목/워터마크 (좁을 때)
+  const sideW = Math.max(meas(dateStr(), 700, 15), meas(CONFIG.maker, 700, 15));
+  const titleText = fitTitle(benchTitle(), W - 2 * (sideW + 26));
+  let wmFont = CONFIG.watermarkFont;
+  const wmMax = W * 0.42;
+  let wmW = meas(CONFIG.watermark, 900, wmFont);
+  if (wmW > wmMax) { wmFont = Math.max(60, wmFont * wmMax / wmW); wmW = meas(CONFIG.watermark, 900, wmFont); }
+
+  const catAxis = {
+    type: "category", data: cats, boundaryGap: false,
+    axisLabel: { interval: 0, color: P.score, fontSize: CONFIG.modelLabelFont, fontWeight: "bold", rotate: horiz ? 0 : 90, margin: 10 },
+    axisTick: { show: false }, axisLine: { lineStyle: { color: P.axis } },
+  };
+  if (horiz) catAxis.inverse = true;
+  const interval = cmp ? niceInterval(yMax, 10) : 5000;   // 비교 모드: 점수 범위에 맞춰 눈금 촘촘하게
+  const valAxis = {
+    type: "value", max: yMax, interval: interval,
+    axisLabel: { color: P.sub, fontSize: 12, formatter: v => (v === yMax && yMax % interval !== 0) ? "" : String(v) },
+    splitLine: { lineStyle: { color: P.grid } },
+    minorTick: { show: true, splitNumber: 5 },
+    minorSplitLine: { show: true, lineStyle: { color: P.minor } },
+    axisLine: { show: true, lineStyle: { color: P.axis } },
+  };
+
+  chart.setOption({
+    animation: false, backgroundColor: COL.bg, textStyle: { fontFamily: FONT },
+    title: [
+      { text: titleText, left: "center", top: 16, textStyle: { color: P.title, fontSize: 23, fontWeight: 800 } },
+      { text: dateStr(), left: 22, top: 20, textStyle: { color: P.sub, fontSize: 15, fontWeight: 700 } },
+      { text: CONFIG.maker, right: 22, top: 20, textStyle: { color: P.sub, fontSize: 15, fontWeight: 700 } },
+    ],
+    grid: { left: gridLeft, right: gridRight, top: gridTop, bottom: gridBottom },
+    tooltip: { show: !selecting, trigger: "item", formatter: p => p.data._r
+      ? `<b>${displayName(p.data._r)}</b><br>${benchTitle()} Graphics: <b>${fmt(p.value)}</b><br>결과수: ${fmt(p.data._r.count)}` : "" },
+    xAxis: horiz ? valAxis : catAxis,
+    yAxis: horiz ? catAxis : valAxis,
+    series: [{
+      type: "bar", data: vals, barWidth,
+      label: { show: true, position: horiz ? "right" : "top", color: P.score, fontSize: CONFIG.scoreLabelFont,
+        distance: 4, rotate: horiz ? 0 : 90, align: "left", verticalAlign: "middle",
+        formatter: p => p.data._r ? fmt(p.value) : "" },
+    }],
+  }, true);
+
+  LAST = { items, bounds, horiz, gridLeft, gridRight, gridTop, gridBottom, W, H, modelMax, yMax, interval, wmFont, wmW, P };
+  requestAnimationFrame(drawOverlay);
+  fit();
+}
+
+/* 좌우 폭에만 맞춰 스케일, 높이는 넘치면 세로 스크롤 — transform만 바꾸므로 실시간 */
+function fit() {
+  if (!curW || !curH) return;
+  const availW = mainEl.clientWidth - 2 * CONFIG.fitPad;
+  if (availW <= 0) return;
+  let s = availW / curW;
+  if (s > CONFIG.maxScale) s = CONFIG.maxScale;
+  if (s <= 0) s = 0.01;
+  stage.style.transform = `scale(${s})`;
+  scaleWrap.style.width = (curW * s) + "px";     // 스케일된 크기를 레이아웃 박스로 → 세로 스크롤 동작
+  scaleWrap.style.height = (curH * s) + "px";
+}
+
+function drawOverlay() {
+  if (distMode || !LAST) return;
+  const { items, bounds, horiz, gridLeft, gridRight, gridTop, gridBottom, W, H, modelMax, yMax, interval, wmFont, wmW, P } = LAST;
+  const catPix = i => chart.convertToPixel({ [horiz ? "yAxisIndex" : "xAxisIndex"]: 0 }, i);
+
+  const cmp = selecting || !!compareSet;   // 비교 모드: 워터마크/그룹명 숨김
+  const gfx = [];
+  if (!cmp) {   // 워터마크: 세로 → 좌상단, 가로 → 우상단(조금 안쪽). 비교 모드에선 숨김
+    const wmLeft = horiz ? Math.max(W - wmW - 180, gridLeft + 20) : 150;
+    const wmTop = horiz ? 200 : 130;
+    gfx.push({ type: "text", left: wmLeft, top: wmTop, z: 0, silent: true,
+      style: { text: CONFIG.watermark, fontSize: wmFont, fontWeight: 900, fill: P.wm, fontFamily: FONT } });
+  }
+
+  if (!horiz) {
+    const yT = gridTop, yB = H - gridBottom, groupY = yB + 14 + modelMax + 16;
+    // 맨 오른쪽 세로 경계선(왼쪽 축선과 대칭으로 박스 닫기)
+    gfx.push({ type: "line", z: 1, silent: true, shape: { x1: W - gridRight, y1: yT, x2: W - gridRight, y2: yB }, style: { stroke: P.axis, lineWidth: 1 } });
+    for (let i = 0; i < bounds.length - 1; i++) {
+      const xm = (catPix(bounds[i].end) + catPix(bounds[i + 1].start)) / 2;
+      gfx.push({ type: "line", z: 1, silent: true, shape: { x1: xm, y1: yT, x2: xm, y2: yB }, style: { stroke: P.div, lineWidth: 1 } });
+    }
+    if (!cmp) for (const b of bounds) {
+      if (!b.label) continue;
+      const cx = (catPix(b.start) + catPix(b.end)) / 2;
+      const tw = meas(b.label, 700, CONFIG.groupLabelFont);   // 글자폭만큼 좌측 이동 → 그룹 중앙 정렬
+      gfx.push({ type: "text", left: cx - tw / 2, top: groupY, z: 5, silent: true,
+        style: { text: b.label, fill: P.group, fontSize: CONFIG.groupLabelFont, fontWeight: 700, fontFamily: FONT } });
+    }
+  } else {
+    const xL = gridLeft, xR = W - gridRight;
+    // 맨 위 가로 경계선(아래 축선과 대칭으로 박스 닫기)
+    gfx.push({ type: "line", z: 1, silent: true, shape: { x1: xL, y1: gridTop, x2: xR, y2: gridTop }, style: { stroke: P.axis, lineWidth: 1 } });
+    for (let v = 0; v <= yMax; v += interval) {
+      const x = chart.convertToPixel({ xAxisIndex: 0 }, v);
+      if (x == null) continue;
+      gfx.push({ type: "text", left: x, top: gridTop - 24, z: 5, silent: true,
+        style: { text: String(v), textAlign: "center", fill: P.sub, fontSize: 12, fontFamily: FONT } });
+    }
+    for (let i = 0; i < bounds.length - 1; i++) {
+      const ym = (catPix(bounds[i].end) + catPix(bounds[i + 1].start)) / 2;
+      gfx.push({ type: "line", z: 1, silent: true, shape: { x1: xL, y1: ym, x2: xR, y2: ym }, style: { stroke: P.div, lineWidth: 1 } });
+    }
+    if (!cmp) for (const b of bounds) {
+      if (!b.label) continue;
+      const cy = (catPix(b.start) + catPix(b.end)) / 2;
+      const tw = meas(b.label, 700, CONFIG.groupLabelFont);   // 세로와 동일하게 -tw/2 로 그룹 중앙 정렬
+      gfx.push({ type: "text", left: 16, top: cy - tw / 2, z: 5, silent: true,
+        rotation: -Math.PI / 2, originX: 0, originY: 0,
+        style: { text: b.label, fill: P.group, fontSize: CONFIG.groupLabelFont, fontWeight: 700, fontFamily: FONT } });
+    }
+  }
+  chart.setOption({ graphic: gfx });
+}
+
+/* ---------- PNG (세로→폭 8000, 가로→높이 8000) ---------- */
+function exportPng() {
+  const pr = orientation === "vertical" ? CONFIG.pngLong / curW : CONFIG.pngLong / curH;
+  const url = chart.getDataURL({ type: "png", pixelRatio: pr, backgroundColor: COL.bg });
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  a.href = url; a.download = `3dmark_${kind}_${bench}_${ts}.png`; a.click();
+}
+
+/* ---------- 테마 ---------- */
+function applyTheme() {
+  document.body.classList.toggle('light', theme === 'light');
+  document.getElementById('themeBtn').textContent = theme === 'light' ? '☀️' : '🌙';
+}
+function syncPickers() {
+  [["bg", "cBg", "cBgHex"], ["nvidia", "cNv", "cNvHex"], ["amd", "cAm", "cAmHex"], ["intel", "cIn", "cInHex"]]
+    .forEach(([k, c, h]) => { const ce = document.getElementById(c), he = document.getElementById(h); if (ce) ce.value = COL[k]; if (he) he.value = COL[k]; });
+}
+
+/* ---------- 이벤트 ---------- */
+function refreshSwitches() {
+  [["genRev", "genRevL0", "genRevL1"], ["dir", "dirL0", "dirL1"], ["orient", "orientL0", "orientL1"], ["compare", "cmpL0", "cmpL1"]].forEach(([id, l0, l1]) => {
+    const on = document.getElementById(id).checked;
+    document.getElementById(l0).classList.toggle('act', !on);
+    document.getElementById(l1).classList.toggle('act', on);
+  });
+}
+document.getElementById('bench').addEventListener('change', e => { bench = e.target.value; render(); });   // 시리즈 선택 유지
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); kind = t.dataset.kind;
+  const desk = kind === 'desktop';
+  distBtn.style.display = desk ? '' : 'none';        // 성능분포는 데스크탑 전용
+  if (!desk && distMode) { distMode = false; distBtn.classList.remove('on'); }
+  if (!desk) { const dt = document.getElementById('distTune'); if (dt) dt.style.display = 'none'; }
+  buildBenchSelect(); buildSeriesFilter(); render();
+}));
+const distBtn = document.getElementById('distBtn');
+// 임시 조절 팝업 — 비활성화(주석). 재활성화하려면 아래 두 줄의 주석을 해제하세요.
+// const distTune = buildDistTune();
+distBtn.addEventListener('click', () => {
+  distMode = !distMode;
+  distBtn.classList.toggle('on', distMode);
+  // distTune.style.display = distMode ? 'block' : 'none';
+  render();
+});
+["byGen", "byVendor", "genRev", "dir"].forEach(id =>
+  document.getElementById(id).addEventListener("change", () => { refreshSwitches(); render(); }));
+// 검색(상단바): 비매칭 흐리게(형태 유지) + 입력 시 x 버튼 표시
+function onSearch() {
+  const s = document.getElementById('search');
+  s.closest('.searchbox').classList.toggle('has-text', !!s.value);
+  render();
+}
+document.getElementById('search').addEventListener('input', onSearch);
+document.getElementById('searchClear').addEventListener('click', () => {
+  const s = document.getElementById('search');
+  s.value = ''; s.closest('.searchbox').classList.remove('has-text'); s.focus(); render();
+});
+document.getElementById('orient').addEventListener('change', e => { orientation = e.target.checked ? 'horizontal' : 'vertical'; refreshSwitches(); render(); });
+document.getElementById('exportBtn').addEventListener('click', exportPng);
+
+/* ---------- 비교하기(특정 GPU만 선택) ---------- */
+const cmpBar = document.getElementById('cmpBar');
+function updateCmpMsg() { document.getElementById('cmpMsg').textContent = `비교할 GPU 막대 클릭 · ${pendingSel.size}개 선택`; }
+function startCompare() {            // 토글 ON: 팝업 닫고 선택 모드(그래프 어둡게) + 가로 막대 자동 전환
+  compareSet = null; pendingSel.clear(); selecting = true;
+  prevOrientation = orientation;
+  orientation = 'horizontal';
+  document.getElementById('orient').checked = true;
+  openPanel(false);
+  cmpBar.classList.add('open'); updateCmpMsg();
+  refreshSwitches();
+  render();
+}
+function stopCompare() {             // 토글 OFF: 원래대로(방향도 복원)
+  selecting = false; compareSet = null; pendingSel.clear();
+  cmpBar.classList.remove('open');
+  document.getElementById('compare').checked = false;
+  if (prevOrientation !== null) {
+    orientation = prevOrientation; prevOrientation = null;
+    document.getElementById('orient').checked = (orientation === 'horizontal');
+  }
+  refreshSwitches();
+  render();
+}
+document.getElementById('compare').addEventListener('change', e => { e.target.checked ? startCompare() : stopCompare(); refreshSwitches(); });
+document.getElementById('cmpOk').addEventListener('click', () => {
+  if (!pendingSel.size) { stopCompare(); return; }   // 선택 없으면 취소와 동일
+  compareSet = new Set(pendingSel); selecting = false;
+  cmpBar.classList.remove('open');
+  render();                                          // 선택한 막대만으로 재구성
+});
+document.getElementById('cmpCancel').addEventListener('click', stopCompare);
+chart.on('click', p => {                              // 선택 모드에서 막대 클릭 → 토글
+  if (!selecting || !p.data || !p.data._r) return;
+  const k = keyOf(p.data._r);
+  pendingSel.has(k) ? pendingSel.delete(k) : pendingSel.add(k);
+  updateCmpMsg(); render();
+});
+document.getElementById('selAll').addEventListener('click', () => { document.querySelectorAll('#seriesFilter input').forEach(i => { i.checked = true; activeSeries.add(i.dataset.s); }); render(); });
+document.getElementById('selNone').addEventListener('click', () => { document.querySelectorAll('#seriesFilter input').forEach(i => { i.checked = false; }); activeSeries.clear(); render(); });
+
+// 옵션 팝업
+function openPanel(o) { document.getElementById('panel').classList.toggle('open', o); document.getElementById('backdrop').classList.toggle('open', o); }
+document.getElementById('gearBtn').addEventListener('click', () => openPanel(!document.getElementById('panel').classList.contains('open')));
+document.getElementById('backdrop').addEventListener('click', () => openPanel(false));
+
+// 모바일: 팝업(바텀시트)을 아래로 슬라이드해서 닫기
+(function () {
+  const panel = document.getElementById('panel');
+  let y0 = null, dy = 0;
+  const isSheet = () => window.matchMedia('(max-width:560px)').matches;
+  panel.addEventListener('touchstart', e => {
+    if (!isSheet() || panel.scrollTop > 0) { y0 = null; return; }   // 내용 스크롤 중이면 무시
+    y0 = e.touches[0].clientY; dy = 0; panel.style.transition = 'none';
+  }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 0) panel.style.transform = `translateY(${dy}px)`;     // 아래로만 따라 내려옴
+  }, { passive: true });
+  panel.addEventListener('touchend', () => {
+    if (y0 === null) return;
+    panel.style.transition = 'transform .2s';
+    if (dy > 90) openPanel(false);                                  // 충분히 내리면 닫기
+    panel.style.transform = '';                                     // 아니면 제자리로
+    y0 = null; dy = 0;
+  });
+})();
+
+// 테마 토글
+document.getElementById('themeBtn').addEventListener('click', () => {
+  theme = theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('3dmark_theme', theme);
+  COL = { ...THEME_COLORS[theme] }; saveColors(); syncPickers(); refreshChips(); applyTheme(); render();
+});
+
+// 색상 피커 + 기본 버튼
+function bindColor(key, cId, hId) {
+  const c = document.getElementById(cId), h = document.getElementById(hId);
+  if (!c || !h) return;   // 공유용 파일(색상 UI 제거)에서도 안전
+  c.addEventListener('input', () => { COL[key] = c.value; h.value = c.value; saveColors(); refreshChips(); render(); });
+  h.addEventListener('change', () => { if (/^#[0-9a-fA-F]{6}$/.test(h.value.trim())) { COL[key] = h.value.trim(); c.value = COL[key]; saveColors(); refreshChips(); render(); } });
+}
+bindColor("bg", "cBg", "cBgHex"); bindColor("nvidia", "cNv", "cNvHex"); bindColor("amd", "cAm", "cAmHex"); bindColor("intel", "cIn", "cInHex");
+const _cReset = document.getElementById('cReset');
+if (_cReset) _cReset.addEventListener('click', () => {
+  COL = { ...THEME_COLORS[theme] };
+  saveColors(); syncPickers(); refreshChips(); render();
+});
+
+// 창 크기 변경: 다시 그리지 않고 스케일(transform)만 갱신 → 실시간으로 따라 움직임
+let _raf; window.addEventListener('resize', () => { if (_raf) cancelAnimationFrame(_raf); _raf = requestAnimationFrame(fit); });
+
+/* Pretendard 웹폰트가 캔버스 렌더보다 늦게 준비되면(특히 새로고침 시 캐시된 JS가 즉시 렌더)
+   기본 폰트로 그려진다. 폰트 로드가 끝나면 한 번 더 그린다. */
+function ensureFont() {
+  if (!document.fonts || !document.fonts.load) return;
+  Promise.all(["400", "500", "700", "800", "900"].map(w => document.fonts.load(w + " 16px Pretendard")))
+    .then(() => document.fonts.ready)
+    .then(() => render())
+    .catch(() => {});
+}
+
+/* 초기화 */
+applyTheme();
+distBtn.style.display = (kind === 'desktop') ? '' : 'none';
+syncPickers(); buildBenchSelect(); buildSeriesFilter(); refreshSwitches();
+render();
+ensureFont();   // 폰트 준비되면 재렌더(설치 안 된 PC에서 새로고침 시 fallback 방지)
+</script>
+</body>
+</html>

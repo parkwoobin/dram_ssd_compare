@@ -53,13 +53,16 @@ function broadcastTheme(theme) {
   if (dduRoot) dduRoot.classList.toggle('dark', theme === 'dark');
 }
 
-document.getElementById('theme-toggle').addEventListener('click', () => {
-  const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.body.dataset.theme = next;
-  localStorage.setItem('site_theme', next);
-  document.getElementById('theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
-  broadcastTheme(next);
-});
+const _themeToggleBtn = document.getElementById('theme-toggle');
+if (_themeToggleBtn) {
+  _themeToggleBtn.addEventListener('click', () => {
+    const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.body.dataset.theme = next;
+    localStorage.setItem('site_theme', next);
+    _themeToggleBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+    broadcastTheme(next);
+  });
+}
 
 let trendChartInstance = null;
 let hoverChartInstance = null;

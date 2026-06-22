@@ -428,14 +428,12 @@ td { padding: 12px 16px; vertical-align: top; }
 }
 
 /* ── 인라인 HTML 섹션 ────────────────────────────────────────── */
-#3dmark-section, #ddu-section {
+#3dmark-section {
   overflow: hidden;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 #ddu-section {
-  overflow-y: auto;
-  max-height: 85vh;
 }
 
 /* ── Footer ─────────────────────────────────────────────────── */

@@ -249,7 +249,7 @@ const DIST = {
 
 const DATA = window.CHART_DATA;
 const FONT = '"Pretendard", system-ui, sans-serif';
-const fmt = n => (n == null ? "" : String(n));
+const markFmt = n => (n == null ? "" : String(n));
 
 let kind = "desktop";
 let bench = Object.keys(DATA.desktop)[0] || "timespy";
@@ -265,11 +265,11 @@ const keyOf = r => (r.series + "" + r.model);
 let COL = { ...THEME_COLORS[theme] };   // 색상은 테마 기본값을 따른다
 function saveColors() { try { localStorage.setItem('3dmark_colors', JSON.stringify(COL)); } catch (e) {} }
 
-const el = document.getElementById('chart');
+const markChartEl = document.getElementById('chart');
 const stage = document.getElementById('stage');
 const scaleWrap = document.getElementById('scaleWrap');
 const mainEl = document.querySelector('main');
-const chart = echarts.init(el, null, { renderer: 'canvas', devicePixelRatio: Math.max(2, window.devicePixelRatio || 1) });
+const chart = echarts.init(markChartEl, null, { renderer: 'canvas', devicePixelRatio: Math.max(2, window.devicePixelRatio || 1) });
 const _mc = document.createElement('canvas').getContext('2d');
 const meas = (t, w, s) => { _mc.font = `${w} ${s}px ${FONT}`; return _mc.measureText(t).width; };
 
@@ -674,14 +674,14 @@ function render() {
     ],
     grid: { left: gridLeft, right: gridRight, top: gridTop, bottom: gridBottom },
     tooltip: { show: !selecting, trigger: "item", formatter: p => p.data._r
-      ? `<b>${displayName(p.data._r)}</b><br>${benchTitle()} Graphics: <b>${fmt(p.value)}</b><br>결과수: ${fmt(p.data._r.count)}` : "" },
+      ? `<b>${displayName(p.data._r)}</b><br>${benchTitle()} Graphics: <b>${markFmt(p.value)}</b><br>결과수: ${markFmt(p.data._r.count)}` : "" },
     xAxis: horiz ? valAxis : catAxis,
     yAxis: horiz ? catAxis : valAxis,
     series: [{
       type: "bar", data: vals, barWidth,
       label: { show: true, position: horiz ? "right" : "top", color: P.score, fontSize: CONFIG.scoreLabelFont,
         distance: 4, rotate: horiz ? 0 : 90, align: "left", verticalAlign: "middle",
-        formatter: p => p.data._r ? fmt(p.value) : "" },
+        formatter: p => p.data._r ? markFmt(p.value) : "" },
     }],
   }, true);
 

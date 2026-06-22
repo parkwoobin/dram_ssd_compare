@@ -16,7 +16,11 @@
       "Bash(cat ~/.ssh/known_hosts 2>/dev/null | head -20; cat ~/.ssh/config 2>/dev/null; cat D:/dram_ssd_compare/.env 2>/dev/null | grep -v SECRET)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(grep -v \"function \\\\|addEventListener\\\\|//\\\\|\\\\.add\")",
+      "Bash(ssh -i \"D:\\\\dram_ssd_compare\\\\.ssh\\\\ssh-key-2026-05-13.key\" -o StrictHostKeyChecking=no ubuntu@161.33.28.153 \"cd /home/ubuntu/dram_ssd_compare && git pull && docker compose -f docker-compose.oracle-https.yml restart frontend\")",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(curl -s http://localhost:8000/static/js/app.js)"
     ]
   }
 }
