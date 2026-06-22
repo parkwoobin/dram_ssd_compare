@@ -61,6 +61,38 @@ def _history_key(category: CategoryEnum, name: str) -> tuple | None:
     return None
 
 
+def _fill_history_gaps(
+    dw_rows: dict[str, float],
+    smt_rows: dict[str, float],
+    today: date_type,
+) -> list[dict]:
+    all_dates = sorted(set(dw_rows) | set(smt_rows))
+    if not all_dates:
+        return []
+
+    start = date_type.fromisoformat(all_dates[0])
+    filled = []
+    last_dw = None
+    last_smt = None
+    current = start
+
+    while current <= today:
+        day = str(current)
+        if day in dw_rows:
+            last_dw = dw_rows[day]
+        if day in smt_rows:
+            last_smt = smt_rows[day]
+
+        filled.append({
+            "date": day,
+            "danawa_price": last_dw,
+            "smtcom_price": last_smt,
+        })
+        current += timedelta(days=1)
+
+    return filled
+
+
 async def _get_daily_history_rows(
     session: AsyncSession,
     source: SourceEnum,
@@ -460,14 +492,7 @@ async def get_daily_history(
                 }
             ]
 
-    return [
-        {
-            "date": d,
-            "danawa_price": dw_rows.get(d),
-            "smtcom_price": smt_rows.get(d),
-        }
-        for d in all_dates
-    ]
+    return _fill_history_gaps(dw_rows, smt_rows, today)
 
 
 async def get_saved_daily_history(
