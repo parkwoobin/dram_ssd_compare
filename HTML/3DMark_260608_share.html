@@ -258,7 +258,7 @@ const fmt = n => (n == null ? "" : String(n));
 let kind = "desktop";
 let bench = Object.keys(DATA.desktop)[0] || "timespy";
 let orientation = "vertical";
-let theme = (localStorage.getItem('3dmark_theme') || 'dark');
+let theme = (localStorage.getItem('3dmark_theme') || 'light');
 let activeSeries = new Set();
 let distMode = false;           // 성능 분포(히스토그램) 모드
 let selecting = false;          // 비교 선택 진행 중
