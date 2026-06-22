@@ -516,10 +516,10 @@ function show3dmark() {
   el.markSection.style.display = '';
   const iframe = el.markSection.querySelector('iframe');
   if (iframe && iframe.contentWindow) {
-    requestAnimationFrame(() => {
-      iframe.contentWindow.dispatchEvent(new Event('resize'));
+    setTimeout(() => {
       iframe.contentWindow.postMessage({ theme: document.body.dataset.theme || 'light' }, '*');
-    });
+      iframe.contentWindow.postMessage({ type: 'init' }, '*');
+    }, 80);
   }
 }
 

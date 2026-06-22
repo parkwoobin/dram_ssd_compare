@@ -894,9 +894,13 @@ document.getElementById('backdrop').addEventListener('click', () => openPanel(fa
 
 // 부모 사이트에서 postMessage로 테마 수신
 window.addEventListener('message', (e) => {
-  if (e.data && (e.data.theme === 'light' || e.data.theme === 'dark')) {
+  if (!e.data) return;
+  if (e.data.theme === 'light' || e.data.theme === 'dark') {
     theme = e.data.theme;
     COL = { ...THEME_COLORS[theme] }; saveColors(); syncPickers(); refreshChips(); applyTheme(); render();
+  }
+  if (e.data.type === 'init') {
+    render(); fit();
   }
 });
 
