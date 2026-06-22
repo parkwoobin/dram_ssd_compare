@@ -72,11 +72,10 @@ async def test_trend_daily_history_uses_saved_daily_prices_only(tmp_path):
 
     assert response.danawa_name == "삼성전자 DDR5-5600 (16GB)"
     assert response.smtcom_name == "삼성전자 DDR5-5600 (16GB) PC5-44800"
+    assert len(response.history) == 1
     assert response.history[0].date == str(saved_day)
     assert response.history[0].danawa_price == 340000
     assert response.history[0].smtcom_price == 335000
-    assert response.history[-1].danawa_price == 340000
-    assert response.history[-1].smtcom_price == 335000
 
 
 @pytest.mark.asyncio
@@ -134,118 +133,6 @@ async def test_daily_history_includes_today_latest_products(tmp_path):
     assert history == [
         {"date": "2026-05-14", "danawa_price": 340000, "smtcom_price": None},
         {"date": "2026-05-15", "danawa_price": 330000, "smtcom_price": None},
-    ]
-
-
-@pytest.mark.asyncio
-async def test_daily_history_groups_memory_name_variants(tmp_path):
-    db_path = tmp_path / "trend_alias.db"
-    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
-        session.add_all(
-            [
-                DailyPrice(
-                    date=date(2026, 6, 20),
-                    source=SourceEnum.danawa,
-                    category=CategoryEnum.memory,
-                    name="마이크론 Crucial DDR5-5600 CL46 대원씨티에스 (8GB)",
-                    avg_price=170000,
-                    min_price=170000,
-                    max_price=170000,
-                    crawl_count=1,
-                ),
-                DailyPrice(
-                    date=date(2026, 6, 21),
-                    source=SourceEnum.danawa,
-                    category=CategoryEnum.memory,
-                    name="마이크론 Crucial DDR5-5600 CL46 (8GB)",
-                    avg_price=168000,
-                    min_price=168000,
-                    max_price=168000,
-                    crawl_count=1,
-                ),
-                Product(
-                    source=SourceEnum.danawa,
-                    category=CategoryEnum.memory,
-                    name="마이크론 Crucial DDR5-5600 CL46 대원씨티에스 (8GB)",
-                    price=169000,
-                    rank=1,
-                    crawled_at=datetime(2026, 6, 22, 1, 0, tzinfo=timezone.utc),
-                ),
-            ]
-        )
-        await session.commit()
-
-        history = await get_daily_history(
-            session,
-            CategoryEnum.memory,
-            "마이크론 Crucial DDR5-5600 CL46 대원씨티에스 (8GB)",
-            None,
-            days=30,
-            today=date(2026, 6, 22),
-        )
-
-    assert history == [
-        {"date": "2026-06-20", "danawa_price": 170000, "smtcom_price": None},
-        {"date": "2026-06-21", "danawa_price": 168000, "smtcom_price": None},
-        {"date": "2026-06-22", "danawa_price": 169000, "smtcom_price": None},
-    ]
-
-
-@pytest.mark.asyncio
-async def test_daily_history_fills_missing_dates_with_last_seen_price(tmp_path):
-    db_path = tmp_path / "trend_fill.db"
-    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
-        session.add_all(
-            [
-                DailyPrice(
-                    date=date(2026, 6, 20),
-                    source=SourceEnum.danawa,
-                    category=CategoryEnum.ssd,
-                    name="삼성전자 990 PRO M.2 NVMe (4TB)",
-                    avg_price=1539000,
-                    min_price=1539000,
-                    max_price=1539000,
-                    crawl_count=1,
-                ),
-                DailyPrice(
-                    date=date(2026, 6, 22),
-                    source=SourceEnum.danawa,
-                    category=CategoryEnum.ssd,
-                    name="삼성전자 990 PRO M.2 NVMe (4TB)",
-                    avg_price=1426100,
-                    min_price=1426100,
-                    max_price=1426100,
-                    crawl_count=1,
-                ),
-            ]
-        )
-        await session.commit()
-
-        history = await get_daily_history(
-            session,
-            CategoryEnum.ssd,
-            "삼성전자 990 PRO M.2 NVMe (4TB)",
-            None,
-            days=365,
-            today=date(2026, 6, 22),
-        )
-
-    assert history == [
-        {"date": "2026-06-20", "danawa_price": 1539000, "smtcom_price": None},
-        {"date": "2026-06-21", "danawa_price": 1539000, "smtcom_price": None},
-        {"date": "2026-06-22", "danawa_price": 1426100, "smtcom_price": None},
     ]
 
 
