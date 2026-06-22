@@ -1,14 +1,17 @@
 import asyncio
 import logging
 import os
+import sqlite3
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy.engine import make_url
 
 from crawler.danawa import crawl as danawa_crawl, CATEGORIES as DANAWA_CATS
 from crawler.smtcom import crawl as smtcom_crawl
-from db.database import AsyncSessionLocal
+from db.database import AsyncSessionLocal, DATABASE_URL
 from db.models import SourceEnum, CategoryEnum
 from db.crud import (
     upsert_products,
@@ -24,6 +27,9 @@ logger = logging.getLogger(__name__)
 CRAWL_START_HOUR = int(os.getenv("CRAWL_START_HOUR", 9))
 CRAWL_END_HOUR = int(os.getenv("CRAWL_END_HOUR", 18))
 PRODUCT_RETENTION_DAYS = int(os.getenv("PRODUCT_RETENTION_DAYS", 7))
+DB_BACKUP_HOUR = int(os.getenv("DB_BACKUP_HOUR", 12))
+DB_BACKUP_DIR = Path(os.getenv("DB_BACKUP_DIR", "./data/backups"))
+DB_BACKUP_RETENTION_DAYS = int(os.getenv("DB_BACKUP_RETENTION_DAYS", 14))
 
 
 async def _run_crawl(source: SourceEnum, category: str):
@@ -114,6 +120,54 @@ async def seed_today_prices(target_date=None):
         return 0
 
 
+def _sqlite_database_path(database_url: str) -> Path | None:
+    url = make_url(database_url)
+    if not url.drivername.startswith("sqlite"):
+        return None
+    if not url.database or url.database == ":memory:":
+        return None
+    return Path(url.database)
+
+
+async def backup_database(now: datetime | None = None) -> str | None:
+    """SQLite DB를 안전하게 백업하고 오래된 백업을 정리한다."""
+    db_path = _sqlite_database_path(DATABASE_URL)
+    if db_path is None:
+        logger.warning("DB 백업 건너뜀: SQLite 파일 DB가 아님 (%s)", DATABASE_URL)
+        return None
+    if not db_path.exists():
+        logger.warning("DB 백업 건너뜀: DB 파일 없음 (%s)", db_path)
+        return None
+
+    if now is None:
+        now = datetime.now(timezone.utc) + timedelta(hours=9)
+
+    DB_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    backup_path = DB_BACKUP_DIR / f"prices-{now.strftime('%Y%m%d-%H%M%S')}.db"
+
+    source = sqlite3.connect(db_path)
+    try:
+        dest = sqlite3.connect(backup_path)
+        try:
+            source.backup(dest)
+        finally:
+            dest.close()
+    finally:
+        source.close()
+
+    cutoff = now - timedelta(days=DB_BACKUP_RETENTION_DAYS)
+    for old_backup in DB_BACKUP_DIR.glob("prices-*.db"):
+        try:
+            modified = datetime.fromtimestamp(old_backup.stat().st_mtime, tz=timezone.utc) + timedelta(hours=9)
+            if modified < cutoff:
+                old_backup.unlink()
+        except OSError as e:
+            logger.warning("오래된 DB 백업 정리 실패 (%s): %s", old_backup, e)
+
+    logger.info("DB 백업 완료: %s", backup_path)
+    return str(backup_path)
+
+
 def create_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
     scheduler.add_job(
@@ -138,6 +192,13 @@ def create_scheduler() -> AsyncIOScheduler:
         aggregate_daily,
         CronTrigger(hour=18, minute="5", timezone="Asia/Seoul"),
         id="aggregate_daily",
+        replace_existing=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        backup_database,
+        CronTrigger(hour=DB_BACKUP_HOUR, minute="0", timezone="Asia/Seoul"),
+        id="backup_database",
         replace_existing=True,
         max_instances=1,
     )

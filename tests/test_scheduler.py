@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, func
 
 from db.models import Base, Product, DailyPrice, SourceEnum, CategoryEnum
-from scheduler.jobs import create_scheduler, aggregate_daily, seed_today_prices
+from scheduler.jobs import create_scheduler, aggregate_daily, seed_today_prices, backup_database
 from db.crud import prune_old_products
 import scheduler.jobs as jobs_module
 
@@ -16,16 +16,20 @@ async def test_create_scheduler_runs_hourly_on_the_hour():
     crawl_job = scheduler.get_job("crawl_all")
     seed_job = scheduler.get_job("seed_today_prices")
     aggregate_job = scheduler.get_job("aggregate_daily")
+    backup_job = scheduler.get_job("backup_database")
 
     assert crawl_job is not None
     assert seed_job is not None
     assert aggregate_job is not None
+    assert backup_job is not None
     assert str(crawl_job.trigger.fields[5]) == "*"
     assert str(crawl_job.trigger.fields[6]) == "0"
     assert str(seed_job.trigger.fields[5]) == "0"
     assert str(seed_job.trigger.fields[6]) == "0"
     assert str(aggregate_job.trigger.fields[5]) == "18"
     assert str(aggregate_job.trigger.fields[6]) == "5"
+    assert str(backup_job.trigger.fields[5]) == "12"
+    assert str(backup_job.trigger.fields[6]) == "0"
 
 
 @pytest.mark.asyncio
@@ -197,3 +201,27 @@ async def test_seed_today_prices_copies_previous_day_without_overwriting_actual(
     assert seeded.crawl_count == 0
     assert actual.avg_price == 111000
     assert actual.crawl_count == 1
+
+
+@pytest.mark.asyncio
+async def test_backup_database_creates_readable_copy(tmp_path, monkeypatch):
+    db_path = tmp_path / "prices.db"
+    backup_dir = tmp_path / "backups"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    monkeypatch.setattr(jobs_module, "DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")
+    monkeypatch.setattr(jobs_module, "DB_BACKUP_DIR", backup_dir)
+
+    backup_path = await backup_database(now=datetime(2026, 6, 22, 12, 0, tzinfo=timezone.utc))
+
+    assert backup_path == str(backup_dir / "prices-20260622-120000.db")
+    copied_engine = create_async_engine(f"sqlite+aiosqlite:///{backup_path}")
+    async with copied_engine.begin() as conn:
+        table_count = await conn.scalar(
+            select(func.count()).select_from(Base.metadata.tables["products"])
+        )
+
+    assert table_count == 0
