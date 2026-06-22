@@ -3,9 +3,19 @@ from datetime import datetime, timezone, timedelta, date as date_type
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, asc, delete, or_
 from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum
+from crawler.matcher import (
+    _ddr_gen,
+    _extract_brand,
+    _is_laptop_memory,
+    _is_used,
+    _ssd_strong_keys,
+    _storage_gb,
+)
 
 
 _NATURAL_SORT_RE = re.compile(r"(\d+)")
+_MEMORY_SPEED_RE = re.compile(r"\bDDR[45]?[-\s]?(\d{4,5})\b", re.IGNORECASE)
+_MEMORY_CL_RE = re.compile(r"\bCL\s?(\d{2})\b", re.IGNORECASE)
 
 
 def _natural_sort_key(value: str) -> list:
@@ -13,6 +23,117 @@ def _natural_sort_key(value: str) -> list:
         int(part) if part.isdigit() else part.casefold()
         for part in _NATURAL_SORT_RE.split(value)
     ]
+
+
+def _memory_history_key(name: str) -> tuple | None:
+    brand = _extract_brand(name)
+    capacity = _storage_gb(name)
+    ddr = _ddr_gen(name)
+    speed = _MEMORY_SPEED_RE.search(name)
+    cl = _MEMORY_CL_RE.search(name)
+    if not (brand and capacity and ddr):
+        return None
+    return (
+        brand,
+        capacity,
+        ddr,
+        speed.group(1) if speed else None,
+        cl.group(1) if cl else None,
+        _is_used(name),
+        _is_laptop_memory(name),
+    )
+
+
+def _ssd_history_key(name: str) -> tuple | None:
+    brand = _extract_brand(name)
+    capacity = _storage_gb(name)
+    model_keys = tuple(sorted(_ssd_strong_keys(name)))
+    if not (brand and capacity and model_keys):
+        return None
+    return (brand, capacity, model_keys)
+
+
+def _history_key(category: CategoryEnum, name: str) -> tuple | None:
+    if category == CategoryEnum.memory:
+        return _memory_history_key(name)
+    if category == CategoryEnum.ssd:
+        return _ssd_history_key(name)
+    return None
+
+
+async def _get_daily_history_rows(
+    session: AsyncSession,
+    source: SourceEnum,
+    category: CategoryEnum,
+    name: str,
+    cutoff: date_type,
+) -> dict[str, float]:
+    key = _history_key(category, name)
+    if key is None:
+        result = await session.execute(
+            select(DailyPrice.date, DailyPrice.avg_price)
+            .where(
+                DailyPrice.source == source,
+                DailyPrice.category == category,
+                DailyPrice.name == name,
+                DailyPrice.date >= cutoff,
+            )
+            .order_by(DailyPrice.date)
+        )
+        return {str(r.date): r.avg_price for r in result.all()}
+
+    result = await session.execute(
+        select(DailyPrice.date, DailyPrice.name, DailyPrice.avg_price)
+        .where(
+            DailyPrice.source == source,
+            DailyPrice.category == category,
+            DailyPrice.date >= cutoff,
+        )
+        .order_by(DailyPrice.date)
+    )
+
+    grouped: dict[str, list[float]] = {}
+    for row in result.all():
+        if _history_key(category, row.name) != key or row.avg_price is None:
+            continue
+        grouped.setdefault(str(row.date), []).append(row.avg_price)
+
+    return {
+        day: sum(values) / len(values)
+        for day, values in grouped.items()
+        if values
+    }
+
+
+async def _get_today_latest_price_for_history(
+    session: AsyncSession,
+    source: SourceEnum,
+    category: CategoryEnum,
+    name: str,
+    today: date_type,
+) -> int | None:
+    key = _history_key(category, name)
+    if key is None:
+        return await _get_today_latest_price(session, source, category, name, today)
+
+    day_start_utc = datetime(today.year, today.month, today.day, 0, 0, 0) - timedelta(hours=9)
+    day_end_utc = day_start_utc + timedelta(days=1)
+    result = await session.execute(
+        select(Product.name, Product.price, Product.crawled_at, Product.id)
+        .where(
+            Product.source == source,
+            Product.category == category,
+            Product.price.isnot(None),
+            Product.crawled_at >= day_start_utc,
+            Product.crawled_at < day_end_utc,
+        )
+        .order_by(Product.crawled_at.desc(), Product.id.desc())
+    )
+
+    for row in result.all():
+        if _history_key(category, row.name) == key:
+            return row.price
+    return None
 
 
 async def upsert_products(session: AsyncSession, products: list[dict]):
@@ -258,40 +379,32 @@ async def get_daily_history(
     cutoff = today - timedelta(days=max(days - 1, 0))
     today_str = str(today)
 
-    dw_result = await session.execute(
-        select(DailyPrice.date, DailyPrice.avg_price)
-        .where(
-            DailyPrice.source == SourceEnum.danawa,
-            DailyPrice.category == category,
-            DailyPrice.name == danawa_name,
-            DailyPrice.date >= cutoff,
-        )
-        .order_by(DailyPrice.date)
+    dw_rows = await _get_daily_history_rows(
+        session,
+        SourceEnum.danawa,
+        category,
+        danawa_name,
+        cutoff,
     )
-    dw_rows = {str(r.date): r.avg_price for r in dw_result.all()}
 
     smt_rows: dict = {}
     if smtcom_name:
-        smt_result = await session.execute(
-            select(DailyPrice.date, DailyPrice.avg_price)
-            .where(
-                DailyPrice.source == SourceEnum.smtcom,
-                DailyPrice.category == category,
-                DailyPrice.name == smtcom_name,
-                DailyPrice.date >= cutoff,
-            )
-            .order_by(DailyPrice.date)
+        smt_rows = await _get_daily_history_rows(
+            session,
+            SourceEnum.smtcom,
+            category,
+            smtcom_name,
+            cutoff,
         )
-        smt_rows = {str(r.date): r.avg_price for r in smt_result.all()}
 
     # 오늘은 18:05 확정 집계 전에도 시간별 products 원본으로 차트에 반영한다.
     # 오늘 DailyPrice가 이미 있어도, 장중에는 더 최신 평균으로 덮어쓴다.
-    price = await _get_today_latest_price(session, SourceEnum.danawa, category, danawa_name, today)
+    price = await _get_today_latest_price_for_history(session, SourceEnum.danawa, category, danawa_name, today)
     if price is not None:
         dw_rows[today_str] = price
 
     if smtcom_name:
-        price = await _get_today_latest_price(session, SourceEnum.smtcom, category, smtcom_name, today)
+        price = await _get_today_latest_price_for_history(session, SourceEnum.smtcom, category, smtcom_name, today)
         if price is not None:
             smt_rows[today_str] = price
 
