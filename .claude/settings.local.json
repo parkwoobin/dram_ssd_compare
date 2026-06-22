@@ -12,7 +12,8 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(flyctl logs *)",
       "Bash(~/.fly/bin/flyctl logs *)",
-      "PowerShell(& \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" status --app dram-ssd-compare)"
+      "PowerShell(& \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" status --app dram-ssd-compare)",
+      "Bash(cat ~/.ssh/known_hosts 2>/dev/null | head -20; cat ~/.ssh/config 2>/dev/null; cat D:/dram_ssd_compare/.env 2>/dev/null | grep -v SECRET)"
     ]
   }
 }

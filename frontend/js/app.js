@@ -21,7 +21,8 @@ const el = {
   tableBody: document.querySelector('#compare-table tbody'),
   compareSection: document.getElementById('compare-section'),
   trendSection: document.getElementById('trend-section'),
-  guideSection: document.getElementById('guide-section'),
+  dduSection: document.getElementById('ddu-section'),
+  markSection: document.getElementById('3dmark-section'),
   memoryFilters: document.getElementById('memory-filters'),
   ssdFilters: document.getElementById('ssd-filters'),
   searchInput: document.getElementById('search-input'),
@@ -457,36 +458,35 @@ function renderTrendChart(data) {
 
 // ── Section switching ─────────────────────────────────────────
 
-function showCompare(cat) {
-  el.compareSection.style.display = '';
+function hideAll() {
+  el.compareSection.style.display = 'none';
   el.trendSection.style.display = 'none';
-  el.guideSection.style.display = 'none';
+  el.dduSection.style.display = 'none';
+  el.markSection.style.display = 'none';
+}
+
+function showCompare(cat) {
+  hideAll();
+  el.compareSection.style.display = '';
   el.memoryFilters.style.display = cat === 'memory' ? '' : 'none';
   el.ssdFilters.style.display = cat === 'ssd' ? '' : 'none';
 }
 
 function showTrend() {
-  el.compareSection.style.display = 'none';
+  hideAll();
   el.trendSection.style.display = '';
-  el.guideSection.style.display = 'none';
   loadTrendProducts();
 }
 
-function showGuide() {
-  el.compareSection.style.display = 'none';
-  el.trendSection.style.display = 'none';
-  el.guideSection.style.display = '';
+function showDdu() {
+  hideAll();
+  el.dduSection.style.display = '';
 }
 
-document.querySelectorAll('.guide-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.guide-tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.gtab;
-    document.querySelectorAll('.guide-frame').forEach(f => f.classList.remove('active'));
-    document.getElementById('guide-frame-' + tab).classList.add('active');
-  });
-});
+function show3dmark() {
+  hideAll();
+  el.markSection.style.display = '';
+}
 
 // ── Event bindings ────────────────────────────────────────────
 
@@ -497,10 +497,12 @@ el.tabBtns.forEach(btn => {
     btn.classList.add('active');
 
     if (cat === 'trend') {
-      state.category = 'memory'; // compare state unchanged
+      state.category = 'memory';
       showTrend();
-    } else if (cat === 'guide') {
-      showGuide();
+    } else if (cat === 'ddu') {
+      showDdu();
+    } else if (cat === '3dmark') {
+      show3dmark();
     } else {
       state.category = cat;
       // 카테고리 전환 시 용량 필터 초기화

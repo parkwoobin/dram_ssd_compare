@@ -24,7 +24,8 @@
     <button class="tab-btn active" data-cat="memory">💾 메모리 (RAM)</button>
     <button class="tab-btn" data-cat="ssd">⚡ SSD</button>
     <button class="tab-btn" data-cat="trend">📈 가격 추세</button>
-    <button class="tab-btn" data-cat="guide">🛠️ 가이드</button>
+    <button class="tab-btn" data-cat="3dmark">📊 3DMark 성능 지표</button>
+    <button class="tab-btn" data-cat="ddu">🛠️ DDU 클린설치 가이드</button>
   </div>
 
   <!-- 비교 섹션 -->
@@ -113,15 +114,17 @@
     </p>
   </div>
 
-  <!-- 가이드 섹션 -->
-  <div id="guide-section" style="display:none">
-    <div class="guide-tabs">
-      <button class="guide-tab-btn active" data-gtab="ddu">🛠️ DDU 드라이버 클린설치</button>
-      <button class="guide-tab-btn" data-gtab="3dmark">📊 3DMark 결과</button>
+  <!-- 3DMark 섹션 -->
+  <div id="3dmark-section" style="display:none">
+    <div class="iframe-wrap">
+      <iframe src="/html/3DMark_260608_share.html"></iframe>
     </div>
-    <div class="guide-frame-wrap">
-      <iframe id="guide-frame-ddu" class="guide-frame active" src="/html/DDU%20%EB%93%9C%EB%9D%BC%EC%9D%B4%EB%B2%84%20%ED%81%B4%EB%A6%B0%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C.html"></iframe>
-      <iframe id="guide-frame-3dmark" class="guide-frame" src="/html/3DMark_260608_share.html"></iframe>
+  </div>
+
+  <!-- DDU 섹션 -->
+  <div id="ddu-section" style="display:none">
+    <div class="iframe-wrap">
+      <iframe src="/html/DDU%20%EB%93%9C%EB%9D%BC%EC%9D%B4%EB%B2%84%20%ED%81%B4%EB%A6%B0%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C.html"></iframe>
     </div>
   </div>
 
