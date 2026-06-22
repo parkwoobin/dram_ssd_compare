@@ -120,7 +120,6 @@
       <input type="text" id="search" placeholder="검색">
       <button id="searchClear" class="searchclear" title="지우기">✕</button>
     </div>
-    <button class="icon" id="themeBtn" title="다크/라이트 전환">🌙</button>
     <button class="icon" id="gearBtn" title="옵션">⚙</button>
     <button class="primary" id="exportBtn">PNG 내보내기</button>
   </div>
@@ -893,11 +892,12 @@ document.getElementById('backdrop').addEventListener('click', () => openPanel(fa
   });
 })();
 
-// 테마 토글
-document.getElementById('themeBtn').addEventListener('click', () => {
-  theme = theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem('3dmark_theme', theme);
-  COL = { ...THEME_COLORS[theme] }; saveColors(); syncPickers(); refreshChips(); applyTheme(); render();
+// 부모 사이트에서 postMessage로 테마 수신
+window.addEventListener('message', (e) => {
+  if (e.data && (e.data.theme === 'light' || e.data.theme === 'dark')) {
+    theme = e.data.theme;
+    COL = { ...THEME_COLORS[theme] }; saveColors(); syncPickers(); refreshChips(); applyTheme(); render();
+  }
 });
 
 // 색상 피커 + 기본 버튼

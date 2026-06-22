@@ -13,6 +13,46 @@
   --radius: 8px;
 }
 
+body[data-theme="dark"] {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --gray-50: #111827;
+  --gray-100: #1f2937;
+  --gray-200: #374151;
+  --gray-400: #6b7280;
+  --gray-600: #9ca3af;
+  --gray-900: #f9fafb;
+  --shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+body[data-theme="dark"] header,
+body[data-theme="dark"] .table-wrap,
+body[data-theme="dark"] .filter-bar,
+body[data-theme="dark"] .trend-header,
+body[data-theme="dark"] .trend-chart-wrap,
+body[data-theme="dark"] .hover-popup,
+body[data-theme="dark"] .iframe-wrap,
+body[data-theme="dark"] .github-link {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f9fafb;
+}
+
+body[data-theme="dark"] thead tr { background: #111827; }
+body[data-theme="dark"] tbody tr:hover { background: #1e3a5f; }
+body[data-theme="dark"] tbody tr { border-color: #374151; }
+body[data-theme="dark"] #search-input,
+body[data-theme="dark"] .trend-select { background: #1f2937; color: #f9fafb; border-color: #374151; }
+body[data-theme="dark"] .tab-btn { background: #1f2937; border-color: #374151; color: #9ca3af; }
+body[data-theme="dark"] .sort-btn,
+body[data-theme="dark"] .filter-btn,
+body[data-theme="dark"] .trend-cat-btn,
+body[data-theme="dark"] .days-btn { background: #1f2937; border-color: #374151; color: #9ca3af; }
+body[data-theme="dark"] .sort-btn:hover,
+body[data-theme="dark"] .filter-btn:hover { background: #374151; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -37,6 +77,19 @@ header {
 }
 header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
 #last-updated { font-size: 12px; color: var(--gray-400); }
+.theme-toggle-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--gray-200);
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+}
+.theme-toggle-btn:hover { border-color: var(--gray-400); background: var(--gray-100); }
+body[data-theme="dark"] .theme-toggle-btn { background: #1f2937; border-color: #374151; }
 
 /* ── Container ───────────────────────────────────────────────── */
 .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }

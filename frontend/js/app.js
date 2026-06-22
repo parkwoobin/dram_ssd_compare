@@ -38,6 +38,28 @@ const el = {
   hoverNoData: document.getElementById('hover-no-data'),
 };
 
+// ── Theme ─────────────────────────────────────────────────────
+(function initTheme() {
+  const saved = localStorage.getItem('site_theme') || 'light';
+  document.body.dataset.theme = saved;
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+
+function broadcastTheme(theme) {
+  document.querySelectorAll('iframe').forEach(iframe => {
+    try { iframe.contentWindow.postMessage({ theme }, '*'); } catch (e) {}
+  });
+}
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.body.dataset.theme = next;
+  localStorage.setItem('site_theme', next);
+  document.getElementById('theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  broadcastTheme(next);
+});
+
 let trendChartInstance = null;
 let hoverChartInstance = null;
 let hoverFetchController = null;
@@ -490,6 +512,7 @@ function show3dmark() {
   if (iframe && iframe.contentWindow) {
     requestAnimationFrame(() => {
       iframe.contentWindow.dispatchEvent(new Event('resize'));
+      iframe.contentWindow.postMessage({ theme: document.body.dataset.theme || 'light' }, '*');
     });
   }
 }
