@@ -486,6 +486,10 @@ function showDdu() {
 function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
+  const iframe = el.markSection.querySelector('iframe');
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.dispatchEvent(new Event('resize'));
+  }
 }
 
 // ── Event bindings ────────────────────────────────────────────
