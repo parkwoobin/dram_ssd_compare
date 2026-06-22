@@ -109,7 +109,7 @@
   /* ===== Sticky TOC ===== */
   nav.toc{
     position:sticky;
-    top:0;
+    top:69px;
     z-index:50;
     background:rgba(244,246,251,.92);
     backdrop-filter:saturate(160%) blur(8px);
@@ -663,8 +663,9 @@
         var target = document.getElementById(a.getAttribute('href').slice(1));
         if (!target) return;
         ev.preventDefault();
+        var mainHeaderH = (document.querySelector('header') || {offsetHeight:0}).offsetHeight;
         var navH = document.querySelector('nav.toc').offsetHeight;
-        var y = target.getBoundingClientRect().top + window.pageYOffset - navH - 8;
+        var y = target.getBoundingClientRect().top + window.pageYOffset - navH - mainHeaderH - 8;
         window.scrollTo({ top: y, behavior: 'smooth' });
       });
     });

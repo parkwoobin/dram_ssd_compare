@@ -573,7 +573,7 @@ function showDdu() {
 function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
-  loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html', 'mark-root');
+  loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html?v=3', 'mark-root');
 }
 
 // ── Event bindings ────────────────────────────────────────────
