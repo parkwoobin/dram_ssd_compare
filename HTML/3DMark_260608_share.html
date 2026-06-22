@@ -7,56 +7,53 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
-  :root {
+  .mark-root {
     --page:#161a20; --panel:#1d232c; --panel-2:#262e3a; --text:#e8eaed; --text-dim:#9aa6b4;
     --border:#323b48; --accent:#3b82f6; --accent-2:#60a5fa;
     --font:"Pretendard",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   }
-  body.light {
+  .mark-root.light {
     --page:#dbe2ec; --panel:#ffffff; --panel-2:#eaeef4; --text:#1b2330; --text-dim:#5a6573;
     --border:#c5cdd8; --accent:#2563eb; --accent-2:#3b82f6;
   }
-  * { box-sizing:border-box; }
-  html,body { height:100%; margin:0; }
-  body { background:var(--page); color:var(--text); font-family:var(--font); font-size:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .mark-root * { box-sizing:border-box; }
+  .mark-root { background:var(--page); color:var(--text); font-family:var(--font); font-size:14px; display:flex; flex-direction:column; height:82vh; min-height:500px; overflow:hidden; border-radius:8px; }
 
-  header { display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--page); flex-wrap:wrap; }
-  .hleft { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .hright { display:flex; align-items:center; gap:8px; margin-left:auto; }
-  .searchbox { position:relative; display:inline-flex; align-items:center; }
-  #search { width:150px; padding-right:26px; }
-  .searchclear { position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent;
+  .mark-root header { display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--page); flex-wrap:wrap; }
+  .mark-root .hleft { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .mark-root .hright { display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .mark-root .searchbox { position:relative; display:inline-flex; align-items:center; }
+  .mark-root #search { width:150px; padding-right:26px; }
+  .mark-root .searchclear { position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent;
                  color:var(--text-dim); cursor:pointer; font-size:12px; line-height:1; padding:2px; display:none; }
-  .searchbox.has-text .searchclear { display:block; }
-  .searchclear:hover { color:var(--text); }
-  .sheet-handle { display:none; }
-  /* 상단바 컨트롤 크기 균일(높이 36px) */
-  header select, header input[type=text], header button, header .tab { height:36px; box-sizing:border-box; }
-  header .tab { display:inline-flex; align-items:center; font-size:13px; }
-  header .searchclear { height:auto; }
-  h1 { font-size:16px; font-weight:800; margin:0; color:var(--accent-2); }
-  .tabs { display:flex; gap:6px; }
-  .tab { padding:6px 14px; border:1px solid var(--border); border-radius:8px; background:var(--panel-2); color:var(--text-dim); cursor:pointer; font-weight:700; }
-  .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-  select,input[type=text] { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 10px; font-family:var(--font); font-size:13px; }
-  input[type=color] { width:30px; height:28px; border:1px solid var(--border); border-radius:6px; background:none; padding:0; cursor:pointer; }
-  button { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer; font-family:var(--font); font-weight:700; font-size:13px; }
-  button:hover { border-color:var(--accent); }
-  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-  button.icon { width:36px; height:36px; padding:0; font-size:17px; display:flex; align-items:center; justify-content:center; }
-  #distBtn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
-  /* 분포 변수 조절 임시 팝업 */
-  #distTune { position:fixed; top:58px; left:12px; z-index:55; width:230px; background:var(--panel);
+  .mark-root .searchbox.has-text .searchclear { display:block; }
+  .mark-root .searchclear:hover { color:var(--text); }
+  .mark-root .sheet-handle { display:none; }
+  .mark-root header select, .mark-root header input[type=text], .mark-root header button, .mark-root header .tab { height:36px; box-sizing:border-box; }
+  .mark-root header .tab { display:inline-flex; align-items:center; font-size:13px; }
+  .mark-root header .searchclear { height:auto; }
+  .mark-root h1 { font-size:16px; font-weight:800; margin:0; color:var(--accent-2); }
+  .mark-root .tabs { display:flex; gap:6px; }
+  .mark-root .tab { padding:6px 14px; border:1px solid var(--border); border-radius:8px; background:var(--panel-2); color:var(--text-dim); cursor:pointer; font-weight:700; }
+  .mark-root .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .mark-root select, .mark-root input[type=text] { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 10px; font-family:var(--font); font-size:13px; }
+  .mark-root input[type=color] { width:30px; height:28px; border:1px solid var(--border); border-radius:6px; background:none; padding:0; cursor:pointer; }
+  .mark-root button { background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer; font-family:var(--font); font-weight:700; font-size:13px; }
+  .mark-root button:hover { border-color:var(--accent); }
+  .mark-root button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .mark-root button.icon { width:36px; height:36px; padding:0; font-size:17px; display:flex; align-items:center; justify-content:center; }
+  .mark-root #distBtn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .mark-root #distTune { position:absolute; top:58px; left:12px; z-index:55; width:230px; background:var(--panel);
               border:1px solid var(--border); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45);
               padding:10px 12px; display:none; font-size:12px; color:var(--text); }
-  #distTune .dt-head { font-weight:800; margin-bottom:6px; display:flex; justify-content:space-between; }
-  #distTune .dt-row { display:flex; align-items:center; gap:8px; margin:6px 0; }
-  #distTune .dt-l { flex:0 0 86px; color:var(--text-dim); }
-  #distTune .dt-row input[type=range] { flex:1; min-width:0; accent-color:var(--accent); }
-  #distTune .dt-v { flex:0 0 40px; text-align:right; font-variant-numeric:tabular-nums; }
-  #distTune .dt-reset { cursor:pointer; color:var(--accent-2); font-weight:700; }
+  .mark-root #distTune .dt-head { font-weight:800; margin-bottom:6px; display:flex; justify-content:space-between; }
+  .mark-root #distTune .dt-row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .mark-root #distTune .dt-l { flex:0 0 86px; color:var(--text-dim); }
+  .mark-root #distTune .dt-row input[type=range] { flex:1; min-width:0; accent-color:var(--accent); }
+  .mark-root #distTune .dt-v { flex:0 0 40px; text-align:right; font-variant-numeric:tabular-nums; }
+  .mark-root #distTune .dt-reset { cursor:pointer; color:var(--accent-2); font-weight:700; }
 
-  main { position:relative; flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; background:var(--page); }
+  .mark-root main { position:relative; flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; background:var(--page); }
   /* 폭에 맞춰 스케일(좌우), 높이가 넘치면 세로 스크롤. 외곽 여백 최소 */
   #scaleWrap { margin:4px auto; position:relative; }
   #stage { position:absolute; top:0; left:0; transform-origin:top left; will-change:transform; }
@@ -496,7 +493,7 @@ function featureXs(matched, win, xmax) {
 }
 function renderDist() {
   const P = pal();
-  const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#3b82f6').trim();
+  const accent = (getComputedStyle(document.querySelector('.mark-root') || document.body).getPropertyValue('--accent') || '#3b82f6').trim();
   const W = 1500, H = 850;
   curW = W; curH = H;
   stage.style.width = W + "px"; stage.style.height = H + "px";
@@ -591,7 +588,7 @@ function buildDistTune() {
     r.addEventListener("input", () => { DIST[key] = parseFloat(r.value); v.textContent = r.value; if (distMode) render(); });
     row.append(l, r, v); box.appendChild(row);
   }
-  document.body.appendChild(box);
+  (document.querySelector('.mark-root') || document.body).appendChild(box);
   box.querySelector("#dtReset").addEventListener("click", () => {
     Object.assign(DIST, DIST_DEF);
     box.querySelectorAll("input[type=range]").forEach(r => { r.value = DIST[r.dataset.k]; vsp[r.dataset.k].textContent = DIST[r.dataset.k]; });
@@ -772,8 +769,7 @@ function exportPng() {
 
 /* ---------- 테마 ---------- */
 function applyTheme() {
-  document.body.classList.toggle('light', theme === 'light');
-  document.getElementById('themeBtn').textContent = theme === 'light' ? '☀️' : '🌙';
+  (document.querySelector('.mark-root') || document.body).classList.toggle('light', theme === 'light');
 }
 function syncPickers() {
   [["bg", "cBg", "cBgHex"], ["nvidia", "cNv", "cNvHex"], ["amd", "cAm", "cAmHex"], ["intel", "cIn", "cInHex"]]
@@ -892,17 +888,17 @@ document.getElementById('backdrop').addEventListener('click', () => openPanel(fa
   });
 })();
 
-// 부모 사이트에서 postMessage로 테마 수신
-window.addEventListener('message', (e) => {
-  if (!e.data) return;
-  if (e.data.theme === 'light' || e.data.theme === 'dark') {
-    theme = e.data.theme;
-    COL = { ...THEME_COLORS[theme] }; saveColors(); syncPickers(); refreshChips(); applyTheme(); render();
+// mainEl이 실제 크기를 가질 때까지 기다렸다가 첫 render+fit 실행
+(function autoInit() {
+  function tryRender() {
+    if (mainEl && mainEl.clientWidth > 0) {
+      render(); fit();
+    } else {
+      setTimeout(tryRender, 80);
+    }
   }
-  if (e.data.type === 'init') {
-    render(); fit();
-  }
-});
+  setTimeout(tryRender, 80);
+})();
 
 // 색상 피커 + 기본 버튼
 function bindColor(key, cId, hId) {

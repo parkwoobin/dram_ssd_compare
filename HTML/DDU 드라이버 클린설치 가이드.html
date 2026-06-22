@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DDU로 NVIDIA 그래픽 드라이버 깔끔하게 재설치하기</title>
 <style>
-  :root{
+  .ddu-root{
     --bg:#f4f6fb;
     --card:#ffffff;
     --ink:#1f2937;
@@ -22,7 +22,7 @@
     --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
     --radius:14px;
   }
-  body.dark{
+  .ddu-root.dark{
     --bg:#111827;
     --card:#1f2937;
     --ink:#f9fafb;
@@ -36,9 +36,8 @@
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3);
   }
 
-  *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
-  body{
+  .ddu-root *{box-sizing:border-box;}
+  .ddu-root{
     margin:0;
     background:var(--bg);
     color:var(--ink);
@@ -47,7 +46,7 @@
     -webkit-text-size-adjust:100%;
     word-break:keep-all;
   }
-  a{color:var(--blue);}
+  .ddu-root a{color:var(--blue);}
 
   .wrap{
     max-width:840px;
@@ -671,12 +670,6 @@
     });
   })();
 
-  // 부모 사이트에서 postMessage로 테마 수신
-  window.addEventListener('message', (e) => {
-    if (e.data && (e.data.theme === 'dark' || e.data.theme === 'light')) {
-      document.body.classList.toggle('dark', e.data.theme === 'dark');
-    }
-  });
 </script>
 
 </body>

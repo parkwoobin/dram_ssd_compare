@@ -427,19 +427,15 @@ td { padding: 12px 16px; vertical-align: top; }
   line-height: 2;
 }
 
-/* ── iframe sections ─────────────────────────────────────────── */
-.iframe-wrap {
-  background: #fff;
+/* ── 인라인 HTML 섹션 ────────────────────────────────────────── */
+#3dmark-section, #ddu-section {
+  overflow: hidden;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
-  height: 82vh;
-  min-height: 500px;
 }
-.iframe-wrap iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
+#ddu-section {
+  overflow-y: auto;
+  max-height: 85vh;
 }
 
 /* ── Footer ─────────────────────────────────────────────────── */

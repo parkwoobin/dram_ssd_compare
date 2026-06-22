@@ -47,9 +47,10 @@ const el = {
 })();
 
 function broadcastTheme(theme) {
-  document.querySelectorAll('iframe').forEach(iframe => {
-    try { iframe.contentWindow.postMessage({ theme }, '*'); } catch (e) {}
-  });
+  const markRoot = document.querySelector('.mark-root');
+  if (markRoot) markRoot.classList.toggle('light', theme === 'light');
+  const dduRoot = document.querySelector('.ddu-root');
+  if (dduRoot) dduRoot.classList.toggle('dark', theme === 'dark');
 }
 
 document.getElementById('theme-toggle').addEventListener('click', () => {
@@ -500,27 +501,76 @@ function showTrend() {
   loadTrendProducts();
 }
 
+const _loadedSections = {};
+
+async function loadHtmlSection(sectionEl, url, wrapClass) {
+  if (_loadedSections[wrapClass]) return;
+  _loadedSections[wrapClass] = true;
+
+  try {
+    const resp = await fetch(url);
+    const html = await resp.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // 외부 스타일시트
+    for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+      if (!document.querySelector(`link[href="${link.href}"]`)) {
+        const el = document.createElement('link');
+        el.rel = 'stylesheet'; el.href = link.href;
+        document.head.appendChild(el);
+      }
+    }
+
+    // 외부 스크립트 (순서대로 로드)
+    for (const s of doc.querySelectorAll('script[src]')) {
+      if (!document.querySelector(`script[src="${s.src}"]`)) {
+        await new Promise(res => {
+          const script = document.createElement('script');
+          script.src = s.src; script.onload = res; script.onerror = res;
+          document.head.appendChild(script);
+        });
+      }
+    }
+
+    // 인라인 스타일
+    for (const styleEl of doc.querySelectorAll('style')) {
+      const style = document.createElement('style');
+      style.textContent = styleEl.textContent;
+      document.head.appendChild(style);
+    }
+
+    // 콘텐츠 래퍼
+    const wrapper = document.createElement('div');
+    wrapper.className = wrapClass;
+    const currentTheme = document.body.dataset.theme || 'light';
+    if (wrapClass === 'mark-root') wrapper.classList.toggle('light', currentTheme === 'light');
+    if (wrapClass === 'ddu-root') wrapper.classList.toggle('dark', currentTheme === 'dark');
+    wrapper.innerHTML = doc.body.innerHTML;
+    sectionEl.appendChild(wrapper);
+
+    // 인라인 스크립트 실행
+    for (const oldScript of [...wrapper.querySelectorAll('script')]) {
+      const newScript = document.createElement('script');
+      newScript.textContent = oldScript.textContent;
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    }
+  } catch (e) {
+    sectionEl.innerHTML = `<p style="color:red;padding:20px">로드 실패: ${e.message}</p>`;
+    delete _loadedSections[wrapClass];
+  }
+}
+
 function showDdu() {
   hideAll();
   el.dduSection.style.display = '';
-  const iframe = el.dduSection.querySelector('iframe');
-  if (iframe && iframe.contentWindow) {
-    requestAnimationFrame(() => {
-      iframe.contentWindow.postMessage({ theme: document.body.dataset.theme || 'light' }, '*');
-    });
-  }
+  loadHtmlSection(el.dduSection, '/html/DDU%20%EB%93%9C%EB%9D%BC%EC%9D%B4%EB%B2%84%20%ED%81%B4%EB%A6%B0%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C.html', 'ddu-root');
 }
 
 function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
-  const iframe = el.markSection.querySelector('iframe');
-  if (iframe && iframe.contentWindow) {
-    setTimeout(() => {
-      iframe.contentWindow.postMessage({ theme: document.body.dataset.theme || 'light' }, '*');
-      iframe.contentWindow.postMessage({ type: 'init' }, '*');
-    }, 80);
-  }
+  loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html', 'mark-root');
 }
 
 // ── Event bindings ────────────────────────────────────────────
