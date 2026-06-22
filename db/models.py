@@ -50,6 +50,7 @@ class DailyPrice(Base):
     __table_args__ = (
         UniqueConstraint("date", "source", "name", name="uq_daily_price"),
         Index("ix_daily_prices_date_cat", "date", "category"),
+        Index("ix_daily_prices_lookup", "source", "category", "name", "date"),
     )
 
 

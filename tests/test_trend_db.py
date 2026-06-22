@@ -2,6 +2,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy import text
 
 from api.routes.trend import trend_daily_history
 from db.models import Base, DailyPrice, Product, SourceEnum, CategoryEnum
@@ -76,6 +77,19 @@ async def test_trend_daily_history_uses_saved_daily_prices_only(tmp_path):
     assert response.history[0].date == str(saved_day)
     assert response.history[0].danawa_price == 340000
     assert response.history[0].smtcom_price == 335000
+
+
+@pytest.mark.asyncio
+async def test_daily_prices_lookup_index_exists(tmp_path):
+    db_path = tmp_path / "trend_index.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        result = await conn.execute(text("PRAGMA index_list('daily_prices')"))
+        indexes = {row[1] for row in result.fetchall()}
+
+    assert "ix_daily_prices_lookup" in indexes
 
 
 @pytest.mark.asyncio
