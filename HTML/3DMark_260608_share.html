@@ -888,17 +888,6 @@ document.getElementById('backdrop').addEventListener('click', () => openPanel(fa
   });
 })();
 
-// mainEl이 실제 크기를 가질 때까지 기다렸다가 첫 render+fit 실행
-(function autoInit() {
-  function tryRender() {
-    if (mainEl && mainEl.clientWidth > 0) {
-      render(); fit();
-    } else {
-      setTimeout(tryRender, 80);
-    }
-  }
-  setTimeout(tryRender, 80);
-})();
 
 // 색상 피커 + 기본 버튼
 function bindColor(key, cId, hId) {
@@ -932,6 +921,7 @@ applyTheme();
 distBtn.style.display = (kind === 'desktop') ? '' : 'none';
 syncPickers(); buildBenchSelect(); buildSeriesFilter(); refreshSwitches();
 render();
+requestAnimationFrame(fit);
 ensureFont();   // 폰트 준비되면 재렌더(설치 안 된 PC에서 새로고침 시 fallback 방지)
 </script>
 </body>
