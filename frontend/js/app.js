@@ -488,7 +488,9 @@ function show3dmark() {
   el.markSection.style.display = '';
   const iframe = el.markSection.querySelector('iframe');
   if (iframe && iframe.contentWindow) {
-    iframe.contentWindow.dispatchEvent(new Event('resize'));
+    requestAnimationFrame(() => {
+      iframe.contentWindow.dispatchEvent(new Event('resize'));
+    });
   }
 }
 
