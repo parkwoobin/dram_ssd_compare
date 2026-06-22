@@ -503,6 +503,12 @@ function showTrend() {
 function showDdu() {
   hideAll();
   el.dduSection.style.display = '';
+  const iframe = el.dduSection.querySelector('iframe');
+  if (iframe && iframe.contentWindow) {
+    requestAnimationFrame(() => {
+      iframe.contentWindow.postMessage({ theme: document.body.dataset.theme || 'light' }, '*');
+    });
+  }
 }
 
 function show3dmark() {
