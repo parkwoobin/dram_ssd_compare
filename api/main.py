@@ -70,6 +70,7 @@ app.include_router(trend.router, prefix="/api")
 
 # 프론트엔드 정적 파일
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+app.mount("/html", StaticFiles(directory=str(BASE_DIR / "HTML")), name="html")
 
 
 @app.get("/")

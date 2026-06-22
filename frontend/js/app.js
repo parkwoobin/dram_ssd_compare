@@ -21,6 +21,7 @@ const el = {
   tableBody: document.querySelector('#compare-table tbody'),
   compareSection: document.getElementById('compare-section'),
   trendSection: document.getElementById('trend-section'),
+  guideSection: document.getElementById('guide-section'),
   memoryFilters: document.getElementById('memory-filters'),
   ssdFilters: document.getElementById('ssd-filters'),
   searchInput: document.getElementById('search-input'),
@@ -459,6 +460,7 @@ function renderTrendChart(data) {
 function showCompare(cat) {
   el.compareSection.style.display = '';
   el.trendSection.style.display = 'none';
+  el.guideSection.style.display = 'none';
   el.memoryFilters.style.display = cat === 'memory' ? '' : 'none';
   el.ssdFilters.style.display = cat === 'ssd' ? '' : 'none';
 }
@@ -466,8 +468,25 @@ function showCompare(cat) {
 function showTrend() {
   el.compareSection.style.display = 'none';
   el.trendSection.style.display = '';
+  el.guideSection.style.display = 'none';
   loadTrendProducts();
 }
+
+function showGuide() {
+  el.compareSection.style.display = 'none';
+  el.trendSection.style.display = 'none';
+  el.guideSection.style.display = '';
+}
+
+document.querySelectorAll('.guide-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.guide-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.gtab;
+    document.querySelectorAll('.guide-frame').forEach(f => f.classList.remove('active'));
+    document.getElementById('guide-frame-' + tab).classList.add('active');
+  });
+});
 
 // ── Event bindings ────────────────────────────────────────────
 
@@ -480,6 +499,8 @@ el.tabBtns.forEach(btn => {
     if (cat === 'trend') {
       state.category = 'memory'; // compare state unchanged
       showTrend();
+    } else if (cat === 'guide') {
+      showGuide();
     } else {
       state.category = cat;
       // 카테고리 전환 시 용량 필터 초기화
