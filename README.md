@@ -257,7 +257,7 @@ docker compose -f docker-compose.oracle.yml up -d --build
 
 ### DB 자동 백업
 
-앱 스케줄러는 KST 기준 매일 12:00에 SQLite DB를 백업합니다.
+앱 스케줄러는 KST 기준 매일 00:00에 SQLite DB를 백업합니다.
 
 - 기본 경로: `./data/backups/prices-YYYYMMDD-HHMMSS.db`
 - 기본 보관 기간: 14일
@@ -266,7 +266,7 @@ docker compose -f docker-compose.oracle.yml up -d --build
 필요하면 `.env`에서 조정할 수 있습니다.
 
 ```bash
-DB_BACKUP_HOUR=12
+DB_BACKUP_HOUR=0
 DB_BACKUP_DIR=./data/backups
 DB_BACKUP_RETENTION_DAYS=14
 ```

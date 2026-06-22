@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 CRAWL_START_HOUR = int(os.getenv("CRAWL_START_HOUR", 9))
 CRAWL_END_HOUR = int(os.getenv("CRAWL_END_HOUR", 18))
 PRODUCT_RETENTION_DAYS = int(os.getenv("PRODUCT_RETENTION_DAYS", 7))
-DB_BACKUP_HOUR = int(os.getenv("DB_BACKUP_HOUR", 12))
+DB_BACKUP_HOUR = int(os.getenv("DB_BACKUP_HOUR", 0))
 DB_BACKUP_DIR = Path(os.getenv("DB_BACKUP_DIR", "./data/backups"))
 DB_BACKUP_RETENTION_DAYS = int(os.getenv("DB_BACKUP_RETENTION_DAYS", 14))
 

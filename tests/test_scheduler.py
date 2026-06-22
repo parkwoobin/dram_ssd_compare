@@ -28,7 +28,7 @@ async def test_create_scheduler_runs_hourly_on_the_hour():
     assert str(seed_job.trigger.fields[6]) == "0"
     assert str(aggregate_job.trigger.fields[5]) == "18"
     assert str(aggregate_job.trigger.fields[6]) == "5"
-    assert str(backup_job.trigger.fields[5]) == "12"
+    assert str(backup_job.trigger.fields[5]) == "0"
     assert str(backup_job.trigger.fields[6]) == "0"
 
 
