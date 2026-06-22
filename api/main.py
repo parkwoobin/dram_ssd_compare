@@ -22,6 +22,15 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 
+class NoCacheStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
+
 def _env_true(name: str, default: str = "true") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -69,13 +78,17 @@ app.include_router(compare.router, prefix="/api")
 app.include_router(trend.router, prefix="/api")
 
 # 프론트엔드 정적 파일
-app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
-app.mount("/html", StaticFiles(directory=str(BASE_DIR / "HTML")), name="html")
+app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")
+app.mount("/html", NoCacheStaticFiles(directory=str(BASE_DIR / "HTML")), name="html")
 
 
 @app.get("/")
 async def root():
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    response = FileResponse(str(FRONTEND_DIR / "index.html"))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/favicon.ico")
