@@ -20,7 +20,16 @@
       "Bash(grep -v \"function \\\\|addEventListener\\\\|//\\\\|\\\\.add\")",
       "Bash(ssh -i \"D:\\\\dram_ssd_compare\\\\.ssh\\\\ssh-key-2026-05-13.key\" -o StrictHostKeyChecking=no ubuntu@161.33.28.153 \"cd /home/ubuntu/dram_ssd_compare && git pull && docker compose -f docker-compose.oracle-https.yml restart frontend\")",
       "Bash(curl -s http://localhost:8000/)",
-      "Bash(curl -s http://localhost:8000/static/js/app.js)"
+      "Bash(curl -s http://localhost:8000/static/js/app.js)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(curl -s \"http://localhost:8000/api/trend/history?name=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90%20DDR5-5600%20CL40%2032GB&period=week\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(len\\(d.get\\('history',[]\\)\\), 'rows'\\)\")",
+      "Bash(curl -s \"http://localhost:8000/api/trend/products\")",
+      "Bash(curl -s \"http://localhost:8000/api/trend/products?category=memory\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d,ensure_ascii=False\\)[:500]\\)\")",
+      "Bash(curl -s \"http://localhost:8000/api/trend/history?name=ADATA+DDR4-3200+CL22+%EC%BD%94%EC%9E%87+%2816GB%29&period=week\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(len\\(d.get\\('history',[]\\)\\), 'rows'\\); h=d.get\\('history',[]\\); print\\(h[:2] if h else 'empty'\\)\")"
     ]
   }
 }

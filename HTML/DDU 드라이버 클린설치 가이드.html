@@ -114,7 +114,7 @@
     position:sticky;
     top:69px;
     z-index:50;
-    background:rgba(244,246,251,.92);
+    background:color-mix(in srgb, var(--bg) 92%, transparent);
     backdrop-filter:saturate(160%) blur(8px);
     border-bottom:1px solid var(--line);
     margin-top:26px;
@@ -135,7 +135,7 @@
     font-size:13.5px;
     font-weight:600;
     color:var(--ink-soft);
-    background:#fff;
+    background:var(--card);
     border:1px solid var(--line);
     padding:7px 13px;
     border-radius:999px;
@@ -245,7 +245,7 @@
   figcaption{
     margin-top:8px;
     font-size:12.5px;
-    color:#8a94a3;
+    color:var(--ink-soft);
     text-align:center;
   }
 
@@ -276,7 +276,7 @@
   .path li{
     position:relative;
     padding:10px 14px 10px 44px;
-    background:#fff;
+    background:var(--card);
     border:1px solid var(--line);
     border-radius:10px;
     margin-bottom:8px;
@@ -296,7 +296,7 @@
   }
   .path li b{color:var(--ink);}
   .path li code{
-    background:#fef3c7;border:1px solid #fadf9a;color:#92560a;
+    background:var(--amber-soft);border:1px solid #fadf9a;color:var(--amber-ink);
     border-radius:6px;padding:1px 8px;font-weight:800;
   }
 
@@ -315,7 +315,7 @@
 
   footer{
     text-align:center;
-    color:#9aa3b0;
+    color:var(--ink-soft);
     font-size:12.5px;
     margin-top:34px;
     line-height:1.6;

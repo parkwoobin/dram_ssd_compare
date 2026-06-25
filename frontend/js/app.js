@@ -53,6 +53,7 @@ function broadcastTheme(theme) {
   if (markRoot) markRoot.classList.toggle('light', theme === 'light');
   const dduRoot = document.querySelector('.ddu-root');
   if (dduRoot) dduRoot.classList.toggle('dark', theme === 'dark');
+  if (trendChartInstance) loadTrendHistory();
 }
 
 const _themeToggleBtn = document.getElementById('theme-toggle');
@@ -407,6 +408,12 @@ function renderTrendChart(data) {
   const dw = data.history.map(h => h.danawa_price);
   const smt = data.history.map(h => h.smtcom_price);
 
+  const isDark = document.body.dataset.theme === 'dark';
+  const chartBg    = isDark ? '#1e2530' : '#ffffff';
+  const gridColor  = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const tickColor  = isDark ? '#9ca3af' : '#555555';
+  const legendColor = isDark ? '#e5e7eb' : '#111111';
+
   trendChartInstance = new Chart(el.trendCanvas, {
     type: 'line',
     data: {
@@ -457,6 +464,7 @@ function renderTrendChart(data) {
             boxWidth: 12,
             boxHeight: 12,
             font: { size: 13 },
+            color: legendColor,
           },
         },
         tooltip: {
@@ -468,19 +476,36 @@ function renderTrendChart(data) {
             label: ctx => `${ctx.dataset.label}: ${fmtTooltipWon(ctx.raw)}`,
           },
         },
+        chartAreaBackground: { color: chartBg },
       },
       scales: {
         y: {
           ticks: {
             font: { size: 12 },
+            color: tickColor,
             callback: v => Number(v).toLocaleString('ko-KR') + '원',
           },
+          grid: { color: gridColor },
+          border: { color: gridColor },
         },
         x: {
-          ticks: { font: { size: 12 }, maxTicksLimit: 12 },
+          ticks: { font: { size: 12 }, maxTicksLimit: 12, color: tickColor },
+          grid: { color: gridColor },
+          border: { color: gridColor },
         },
       },
     },
+    plugins: [{
+      id: 'chartAreaBackground',
+      beforeDraw(chart) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        ctx.save();
+        ctx.fillStyle = chart.options.plugins.chartAreaBackground.color;
+        ctx.fillRect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
+        ctx.restore();
+      },
+    }],
   });
 }
 
