@@ -812,17 +812,23 @@ document.getElementById('selNone').addEventListener('click', () => { document.qu
 function openPanel(o) {
   const panel = document.getElementById('panel');
   if (o) {
-    const gear = document.getElementById('gearBtn');
-    const r = gear.getBoundingClientRect();
-    const gap = 6, margin = 12;
-    const panelWidth = Math.min(window.innerWidth - margin * 2, window.innerWidth <= 560 ? 360 : 380);
-    const right = Math.max(margin, Math.min(window.innerWidth - r.right, window.innerWidth - panelWidth - margin));
-    panel.style.top = (r.bottom + 4) + 'px';
-    panel.style.right = right + 'px';
-    panel.style.left = 'auto';
-    panel.style.bottom = 'auto';
-    panel.style.width = window.innerWidth <= 560 ? `calc(100vw - ${margin * 2}px)` : '';
-    panel.style.maxHeight = `calc(100vh - ${r.bottom + gap + margin}px)`;
+    if (window.matchMedia('(max-width:560px)').matches) {
+      // 모바일: 바텀시트 — 인라인 위치값 제거하고 CSS media query(#panel bottom:0…) 에 맡긴다
+      ['top', 'right', 'left', 'bottom', 'width', 'maxHeight', 'transform'].forEach(k => panel.style[k] = '');
+    } else {
+      // 데스크탑: 기어 버튼 기준 드롭다운
+      const gear = document.getElementById('gearBtn');
+      const r = gear.getBoundingClientRect();
+      const gap = 6, margin = 12;
+      const panelWidth = Math.min(window.innerWidth - margin * 2, 380);
+      const right = Math.max(margin, Math.min(window.innerWidth - r.right, window.innerWidth - panelWidth - margin));
+      panel.style.top = (r.bottom + 4) + 'px';
+      panel.style.right = right + 'px';
+      panel.style.left = 'auto';
+      panel.style.bottom = 'auto';
+      panel.style.width = '';
+      panel.style.maxHeight = `calc(100vh - ${r.bottom + gap + margin}px)`;
+    }
   }
   panel.classList.toggle('open', o);
   document.getElementById('backdrop').classList.toggle('open', o);
