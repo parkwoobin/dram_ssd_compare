@@ -597,10 +597,11 @@ function showDdu() {
   loadHtmlSection(el.dduSection, '/html/DDU%20%EB%93%9C%EB%9D%BC%EC%9D%B4%EB%B2%84%20%ED%81%B4%EB%A6%B0%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C.html', 'ddu-root');
 }
 
-function show3dmark() {
+async function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
-  loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html?v=19', 'mark-root');
+  await loadHtmlSection(el.markSection, '/html/3DMark_260608_share.html?v=19', 'mark-root');
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 }
 
 // ── Sidebar ───────────────────────────────────────────────────

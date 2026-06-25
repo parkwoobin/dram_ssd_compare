@@ -955,13 +955,23 @@ render();
 (function() {
   const root = document.querySelector('.mark-root');
   if (!root) return;
+  let _pendingRender = false;
   new MutationObserver(() => {
     const next = root.classList.contains('light') ? 'light' : 'dark';
     if (next === theme) return;
     theme = next;
     COL = { ...THEME_COLORS[theme] };
-    syncPickers(); refreshChips(); render();
+    syncPickers(); refreshChips();
+    if (root.offsetParent === null) { _pendingRender = true; return; }
+    render();
   }).observe(root, { attributes: true, attributeFilter: ['class'] });
+  // 섹션이 다시 보일 때(display 변경) pending render 실행
+  new MutationObserver(() => {
+    if (_pendingRender && root.offsetParent !== null) {
+      _pendingRender = false;
+      requestAnimationFrame(() => { render(); fit(); });
+    }
+  }).observe(root.closest('[style]') || root.parentElement, { attributes: true, attributeFilter: ['style'] });
 })();
 requestAnimationFrame(fit);
 ensureFont();   // 폰트 준비되면 재렌더(설치 안 된 PC에서 새로고침 시 fallback 방지)
