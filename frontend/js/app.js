@@ -43,6 +43,7 @@ const el = {
   const saved = localStorage.getItem('site_theme');
   const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const theme = saved ?? (systemDark ? 'dark' : 'light');
+  if (!saved) localStorage.setItem('site_theme', theme); // 3DMark 등 임베드 HTML이 읽을 수 있도록 저장
   document.body.dataset.theme = theme;
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
