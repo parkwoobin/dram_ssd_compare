@@ -601,7 +601,7 @@ function showDdu() {
 async function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
-  await loadHtmlSection(el.markSection, '/html/3DMark_260625_embed.html?v=1', 'mark-root');
+  await loadHtmlSection(el.markSection, '/html/3DMark_260628_embed.html?v=1', 'mark-root');
   requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 }
 
