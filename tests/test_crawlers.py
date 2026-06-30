@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from crawler.danawa import crawl as danawa_crawl
 from crawler.smtcom import crawl as smtcom_crawl
-from crawler.estimates import _matches_names, has_assembly_fee, latest_posts_by_author, parse_estimate_detail
+from crawler.estimates import _matches_names, has_assembly_fee, latest_posts_by_author, parse_estimate_detail, parse_posted_at
 from crawler.matcher import match_products, _storage_gb, _ddr_gen, _extract_brand
 
 
@@ -116,6 +116,14 @@ def test_parse_estimate_detail_extracts_target_parts():
     assert items[0]["product_name"] == "[AMD] AMD 라이젠7-6세대 9800X3D"
     assert items[1]["quantity"] == 2
     assert items[2]["total_price"] == 69300
+
+
+def test_parse_posted_at_from_estimate_detail():
+    html = "<div>작성일 : 26-06-28 18:28</div>"
+    posted_at = parse_posted_at(html)
+
+    assert posted_at is not None
+    assert posted_at.strftime("%y-%m-%d %H:%M") == "26-06-28 18:28"
 
 
 def test_estimate_name_filter_checks_author_only():

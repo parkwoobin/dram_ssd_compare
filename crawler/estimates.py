@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 import httpx
@@ -22,6 +22,8 @@ TARGET_CATEGORIES = {
     "쿨러/튜닝": "쿨러",
 }
 ASSEMBLY_RE = re.compile(r"(조립\s*비|조립\s*서비스|PC\s*조립|컴퓨터\s*조립)", re.IGNORECASE)
+POSTED_AT_RE = re.compile(r"작성일\s*:?\s*(\d{2,4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})")
+KST = timezone(timedelta(hours=9))
 
 HEADERS = {
     "User-Agent": (
@@ -150,6 +152,34 @@ def parse_estimate_detail(html: str, wr_id: int) -> list[dict]:
     return items
 
 
+def parse_posted_at(html: str) -> datetime | None:
+    text = _clean_text(BeautifulSoup(html, "html.parser").get_text(" ", strip=True))
+    match = POSTED_AT_RE.search(text)
+    if not match:
+        return None
+
+    year, month, day, hour, minute = (int(part) for part in match.groups())
+    if year < 100:
+        year += 2000
+    return datetime(year, month, day, hour, minute, tzinfo=KST)
+
+
+async def fetch_posted_at(client: httpx.AsyncClient, wr_id: int) -> datetime | None:
+    resp = await client.get(_post_url(wr_id))
+    resp.raise_for_status()
+    return parse_posted_at(resp.text)
+
+
+async def fetch_posted_at_map(wr_ids: list[int]) -> dict[int, datetime]:
+    dates: dict[int, datetime] = {}
+    async with httpx.AsyncClient(headers=HEADERS, timeout=30, follow_redirects=True) as client:
+        for wr_id in wr_ids:
+            posted_at = await fetch_posted_at(client, wr_id)
+            if posted_at is not None:
+                dates[wr_id] = posted_at
+    return dates
+
+
 def has_assembly_fee(html: str) -> bool:
     soup = BeautifulSoup(html, "html.parser")
     for row in soup.find_all("tr"):
@@ -224,6 +254,7 @@ async def crawl_estimates(
             if not items:
                 continue
 
+            post["posted_at"] = parse_posted_at(resp.text)
             post["crawled_at"] = crawled_at
             results.append({"post": post, "items": items})
 

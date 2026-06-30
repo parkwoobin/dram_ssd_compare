@@ -4,10 +4,17 @@ const adminState = {
   tab: 'memory',
   products: [],
   trendDefaults: { memory: '', ssd: '' },
+  estimatePostGroups: [],
 };
 
 const adminEl = {
   tabs: document.querySelectorAll('[data-admin-tab]'),
+  desktopTabs: document.querySelectorAll('.admin-tabs [data-admin-tab]'),
+  sidebarTabs: document.querySelectorAll('#admin-sidebar [data-admin-tab]'),
+  sidebarOverlay: document.getElementById('admin-sidebar-overlay'),
+  sidebar: document.getElementById('admin-sidebar'),
+  hamburger: document.getElementById('admin-hamburger-btn'),
+  sidebarClose: document.getElementById('admin-sidebar-close'),
   productsSection: document.getElementById('admin-products-section'),
   trendSection: document.getElementById('admin-trend-section'),
   markSection: document.getElementById('admin-3dmark-section'),
@@ -30,6 +37,7 @@ const adminEl = {
   estimateSettingsSummary: document.getElementById('admin-estimate-settings-summary'),
   estimateCrawl: document.getElementById('admin-estimate-crawl'),
   estimateStatus: document.getElementById('admin-estimate-status'),
+  estimatePosts: document.getElementById('admin-estimate-posts'),
   logout: document.getElementById('admin-logout'),
 };
 
@@ -54,6 +62,16 @@ async function adminFetch(url, options) {
     throw new Error('로그인이 필요합니다.');
   }
   return res;
+}
+
+function openAdminSidebar() {
+  adminEl.sidebar.classList.add('open');
+  adminEl.sidebarOverlay.classList.add('open');
+}
+
+function closeAdminSidebar() {
+  adminEl.sidebar.classList.remove('open');
+  adminEl.sidebarOverlay.classList.remove('open');
 }
 
 function showAdminSection(tab) {
@@ -214,6 +232,21 @@ function updateAdminEstimateSummary(names) {
   adminEl.estimateSettingsSummary.textContent = `${authorText} · 스마트 조립비 포함만`;
 }
 
+function adminFormatDate(value) {
+  return value ? new Date(value).toLocaleString('ko-KR') : '';
+}
+
+function adminFormatPostDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `작성일 : ${yy}-${mm}-${dd} ${hh}:${min}`;
+}
+
 async function loadAdminEstimateSettings() {
   try {
     const res = await adminFetch('/api/estimates/settings');
@@ -225,6 +258,7 @@ async function loadAdminEstimateSettings() {
   } catch (e) {
     adminEl.estimateSettingsSummary.textContent = `설정 로드 실패: ${e.message}`;
   }
+  await loadAdminEstimatePosts();
 }
 
 async function saveAdminEstimateSettings() {
@@ -250,6 +284,55 @@ async function saveAdminEstimateSettings() {
   }
 }
 
+async function loadAdminEstimatePosts() {
+  adminEl.estimatePosts.innerHTML = '<div class="loading">수집된 견적 목록 불러오는 중...</div>';
+  try {
+    const res = await adminFetch('/api/estimates/posts?limit=1000');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    adminState.estimatePostGroups = await res.json();
+    renderAdminEstimatePosts();
+  } catch (e) {
+    adminEl.estimatePosts.innerHTML = `<div class="error-msg">견적 목록 로드 실패: ${adminEscape(e.message)}</div>`;
+  }
+}
+
+function renderAdminEstimatePosts() {
+  const groups = Array.isArray(adminState.estimatePostGroups) ? adminState.estimatePostGroups : [];
+  if (!groups.length) {
+    adminEl.estimatePosts.innerHTML = '<div class="trend-empty">아직 수집된 견적 링크가 없습니다.</div>';
+    return;
+  }
+
+  adminEl.estimatePosts.innerHTML = groups.map((group, index) => {
+    const posts = Array.isArray(group.posts) ? group.posts : [];
+    const postRows = posts.map(post => `
+      <li class="admin-estimate-post-link">
+        <a href="${adminEscape(post.url)}" target="_blank" rel="noopener noreferrer">
+          ${adminEscape(post.title || `견적 #${post.wr_id}`)}
+        </a>
+        <a class="admin-estimate-post-url" href="${adminEscape(post.url)}" target="_blank" rel="noopener noreferrer">
+          ${adminEscape(post.url)}
+        </a>
+        ${post.posted_at ? `
+          <div class="admin-estimate-post-meta">
+            ${adminEscape(adminFormatPostDate(post.posted_at))}
+          </div>
+        ` : ''}
+      </li>
+    `).join('');
+
+    return `
+      <details class="admin-estimate-author" ${index === 0 ? 'open' : ''}>
+        <summary>
+          <span>${adminEscape(group.author)}</span>
+          <strong>${adminFmt(group.post_count)}개 견적</strong>
+        </summary>
+        <ul class="admin-estimate-post-list">${postRows}</ul>
+      </details>
+    `;
+  }).join('');
+}
+
 async function crawlAdminEstimates() {
   adminEl.estimateCrawl.disabled = true;
   adminEl.estimateCrawl.textContent = '수집 중...';
@@ -261,8 +344,10 @@ async function crawlAdminEstimates() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ names: settings.names || [], max_pages: 3 }),
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     adminEl.estimateStatus.textContent = `신규 ${data.saved_posts || 0}건 저장`;
+    await loadAdminEstimatePosts();
   } catch (e) {
     adminEl.estimateStatus.textContent = `수집 실패: ${e.message}`;
   } finally {
@@ -276,7 +361,16 @@ async function logoutAdmin() {
   location.href = '/admin/login';
 }
 
-adminEl.tabs.forEach(btn => btn.addEventListener('click', () => showAdminSection(btn.dataset.adminTab)));
+adminEl.desktopTabs.forEach(btn => btn.addEventListener('click', () => showAdminSection(btn.dataset.adminTab)));
+adminEl.sidebarTabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    closeAdminSidebar();
+    showAdminSection(btn.dataset.adminTab);
+  });
+});
+adminEl.hamburger.addEventListener('click', openAdminSidebar);
+adminEl.sidebarClose.addEventListener('click', closeAdminSidebar);
+adminEl.sidebarOverlay.addEventListener('click', closeAdminSidebar);
 adminEl.productSource.addEventListener('change', loadAdminProducts);
 adminEl.productRefresh.addEventListener('click', loadAdminProducts);
 adminEl.productSearch.addEventListener('input', renderAdminProducts);

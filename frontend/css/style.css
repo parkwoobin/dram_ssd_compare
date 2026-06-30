@@ -516,7 +516,8 @@ body[data-theme="dark"] .icon-action {
   flex-wrap: wrap;
 }
 
-#estimate-author-keywords {
+#estimate-author-keywords,
+#admin-estimate-author-keywords {
   flex: 1 1 360px;
   min-width: min(100%, 260px);
   padding: 9px 12px;
@@ -532,6 +533,83 @@ body[data-theme="dark"] .icon-action {
   margin-top: 8px;
   font-size: 12px;
   color: var(--gray-400);
+}
+
+.admin-estimate-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-estimate-author {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+
+.admin-estimate-author summary {
+  min-height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--gray-900);
+}
+
+.admin-estimate-author summary strong {
+  color: var(--gray-400);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-estimate-post-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--gray-200);
+}
+
+.admin-estimate-post-link {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-estimate-post-link:last-child {
+  border-bottom: none;
+}
+
+.admin-estimate-post-link a {
+  display: inline-block;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-estimate-post-link a:hover {
+  text-decoration: underline;
+}
+
+.admin-estimate-post-url,
+.admin-estimate-post-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-400);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.admin-estimate-post-url {
+  text-decoration: none;
+}
+
+.admin-estimate-post-url:hover {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 #estimate-category-select,
@@ -914,8 +992,19 @@ body[data-theme="dark"] .admin-login-form input {
 
 body[data-theme="dark"] .admin-input,
 body[data-theme="dark"] .admin-cell-input,
-body[data-theme="dark"] .admin-form-grid select {
+body[data-theme="dark"] .admin-form-grid select,
+body[data-theme="dark"] #admin-estimate-author-keywords {
   background: #111827;
+  border-color: #374151;
+}
+
+body[data-theme="dark"] .admin-estimate-author {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+body[data-theme="dark"] .admin-estimate-post-list,
+body[data-theme="dark"] .admin-estimate-post-link {
   border-color: #374151;
 }
 
