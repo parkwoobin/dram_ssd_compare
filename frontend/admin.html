@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 | DRAM &amp; SSD 가격 비교</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=13" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:10px">
+      <h1>관리자</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <a class="admin-login-link" href="/">메인</a>
+      <button id="admin-logout" class="filter-btn" type="button">로그아웃</button>
+    </div>
+  </header>
+
+  <main class="container admin-page">
+    <div class="tabs admin-tabs">
+      <button class="tab-btn active" data-admin-tab="memory">💾 메모리 (RAM)</button>
+      <button class="tab-btn" data-admin-tab="ssd">⚡ SSD</button>
+      <button class="tab-btn" data-admin-tab="trend">📈 가격 추세</button>
+      <button class="tab-btn" data-admin-tab="3dmark">📊 3DMark 성능 지표</button>
+      <button class="tab-btn" data-admin-tab="ddu">🛠️ DDU 클린 설치 가이드</button>
+      <button class="tab-btn" data-admin-tab="estimates">🧾 견적 데이터 크롤링</button>
+    </div>
+
+    <section id="admin-products-section" class="admin-section">
+      <div class="estimate-controls">
+        <div class="estimate-filter-row">
+          <select id="admin-product-source">
+            <option value="danawa">다나와 DB</option>
+            <option value="smtcom">스마트컴 DB</option>
+          </select>
+          <input id="admin-product-search" class="admin-input" type="text" placeholder="제품명 검색" />
+          <button id="admin-product-refresh" class="primary-action">새로고침</button>
+        </div>
+      </div>
+      <div class="table-wrap admin-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:72px">ID</th>
+              <th>제품명</th>
+              <th class="right" style="width:120px">가격</th>
+              <th class="right" style="width:90px">순위</th>
+              <th style="width:170px">수집시각</th>
+              <th class="center" style="width:90px">저장</th>
+            </tr>
+          </thead>
+          <tbody id="admin-products-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="admin-trend-section" class="admin-section" style="display:none">
+      <div class="estimate-controls">
+        <div class="admin-form-grid">
+          <label>메모리 기본 부품</label>
+          <select id="admin-trend-memory"></select>
+          <label>SSD 기본 부품</label>
+          <select id="admin-trend-ssd"></select>
+        </div>
+        <button id="admin-trend-save" class="primary-action">기본값 저장</button>
+      </div>
+    </section>
+
+    <section id="admin-3dmark-section" class="admin-section" style="display:none">
+      <div class="estimate-controls">
+        <div class="admin-import-row">
+          <input id="admin-3dmark-file" class="admin-file-input" type="file" accept=".html,.htm,text/html" />
+          <button id="admin-3dmark-import" class="primary-action">HTML 불러오기</button>
+          <span id="admin-3dmark-status" class="estimate-active-filter">불러온 HTML이 공개 3DMark 탭에 표시됩니다</span>
+        </div>
+        <textarea id="admin-3dmark-html" class="admin-code-editor" spellcheck="false"></textarea>
+        <button id="admin-3dmark-save" class="filter-btn">현재 HTML 적용</button>
+      </div>
+    </section>
+
+    <section id="admin-ddu-section" class="admin-section" style="display:none">
+      <div class="trend-empty">관리 항목 없음</div>
+    </section>
+
+    <section id="admin-estimates-section" class="admin-section" style="display:none">
+      <div class="estimate-controls">
+        <div id="admin-estimate-settings-panel" class="estimate-settings-panel">
+          <label for="admin-estimate-author-keywords">글쓴이 키워드</label>
+          <div class="estimate-settings-row">
+            <input type="text" id="admin-estimate-author-keywords" placeholder="모루, 궁금, 엣지" autocomplete="off" />
+            <button id="admin-estimate-settings-save" class="primary-action">설정 저장</button>
+          </div>
+          <div id="admin-estimate-settings-summary" class="estimate-settings-summary">설정 불러오는 중...</div>
+        </div>
+        <div class="estimate-input-group">
+          <button id="admin-estimate-crawl" class="primary-action">최근 3페이지 수동 수집</button>
+          <span id="admin-estimate-status" class="estimate-active-filter">스마트 조립비 포함만</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/admin.js?v=4"></script>
+</body>
+</html>

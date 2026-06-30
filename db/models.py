@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, Index, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, Index, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import DeclarativeBase
 import enum
 
@@ -65,3 +65,50 @@ class CrawlLog(Base):
     status = Column(String, default="running")      # running / success / failed
     item_count = Column(Integer, default=0)
     error_message = Column(String, nullable=True)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    setting_key = Column(String, nullable=False, unique=True)
+    setting_value = Column(String, nullable=False, default="")
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class EstimatePost(Base):
+    __tablename__ = "estimate_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    wr_id = Column(Integer, nullable=False, unique=True)
+    title = Column(String, nullable=True)
+    author = Column(String, nullable=True)
+    url = Column(String, nullable=False)
+    posted_at = Column(DateTime, nullable=True)
+    crawled_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("ix_estimate_posts_wr_id", "wr_id"),
+        Index("ix_estimate_posts_author", "author"),
+        Index("ix_estimate_posts_crawled", "crawled_at"),
+    )
+
+
+class EstimateItem(Base):
+    __tablename__ = "estimate_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey("estimate_posts.id"), nullable=False)
+    wr_id = Column(Integer, nullable=False)
+    part_category = Column(String, nullable=False)
+    product_name = Column(String, nullable=False)
+    quantity = Column(Integer, nullable=True)
+    unit_price = Column(Integer, nullable=True)
+    total_price = Column(Integer, nullable=True)
+    crawled_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("wr_id", "part_category", "product_name", name="uq_estimate_item"),
+        Index("ix_estimate_items_category_name", "part_category", "product_name"),
+        Index("ix_estimate_items_wr_id", "wr_id"),
+    )

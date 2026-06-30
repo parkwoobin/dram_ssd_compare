@@ -9,8 +9,12 @@ const state = {
   memCapGb: '',
   trendCategory: 'memory',
   trendDays: 7,
+  estimateSort: 'count_desc',
+  estimateCategory: '',
+  trendDefaults: {},
   loading: false,
   allItems: [],
+  estimateItems: [],
 };
 
 const el = {
@@ -22,6 +26,7 @@ const el = {
   compareSection: document.getElementById('compare-section'),
   trendSection: document.getElementById('trend-section'),
   dduSection: document.getElementById('ddu-section'),
+  estimatesSection: document.getElementById('estimates-section'),
   markSection: document.getElementById('3dmark-section'),
   memoryFilters: document.getElementById('memory-filters'),
   ssdFilters: document.getElementById('ssd-filters'),
@@ -36,6 +41,10 @@ const el = {
   hoverTitle: document.getElementById('hover-popup-title'),
   hoverCanvas: document.getElementById('hover-chart'),
   hoverNoData: document.getElementById('hover-no-data'),
+  estimateCategorySelect: document.getElementById('estimate-category-select'),
+  estimateSortSelect: document.getElementById('estimate-sort-select'),
+  estimateStatsBar: document.getElementById('estimate-stats-bar'),
+  estimateTableBody: document.querySelector('#estimate-table tbody'),
 };
 
 // ── Theme ─────────────────────────────────────────────────────
@@ -101,6 +110,15 @@ function diffHtml(diff) {
   const cls = diff < 0 ? 'cheaper' : 'expensive';
   const label = diff < 0 ? '스마트컴 ↓' : '스마트컴 ↑';
   return `<span class="diff ${cls}">${sign}${Math.abs(diff).toLocaleString('ko-KR')}원<br><small>${label}</small></span>`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 // ── Compare table ─────────────────────────────────────────────
@@ -349,8 +367,21 @@ async function loadTrendProducts() {
       .map(p => `<option value="${encodeURIComponent(p)}">${p}</option>`)
       .join('');
 
-    // Default selection (중고 제외 우선)
-    const defaultName = state.trendCategory === 'memory'
+    let configuredDefault = state.trendDefaults[state.trendCategory] || '';
+    if (!configuredDefault) {
+      try {
+        const defaultsRes = await fetch('/api/admin/trend-defaults');
+        if (defaultsRes.ok) state.trendDefaults = await defaultsRes.json();
+        configuredDefault = state.trendDefaults[state.trendCategory] || '';
+      } catch (e) {
+        configuredDefault = '';
+      }
+    }
+
+    // Default selection (관리자 설정 우선, 없으면 중고 제외 우선)
+    const defaultName = products.includes(configuredDefault)
+      ? configuredDefault
+      : state.trendCategory === 'memory'
       ? products.find(p => /삼성/.test(p) && /16GB/i.test(p) && !/중고/.test(p))
         || products.find(p => /삼성/.test(p) && /16GB/i.test(p))
         || products[0]
@@ -516,6 +547,7 @@ function hideAll() {
   el.compareSection.style.display = 'none';
   el.trendSection.style.display = 'none';
   el.dduSection.style.display = 'none';
+  el.estimatesSection.style.display = 'none';
   el.markSection.style.display = 'none';
 }
 
@@ -530,6 +562,68 @@ function showTrend() {
   hideAll();
   el.trendSection.style.display = '';
   loadTrendProducts();
+}
+
+function renderEstimateTable(items) {
+  const maxCount = Math.max(...items.map(item => item.used_count), 1);
+  el.estimateTableBody.innerHTML = items.map((item, idx) => {
+    const pct = Math.max(2, Math.round((item.used_count / maxCount) * 100));
+    return `
+      <tr>
+        <td class="center">${idx + 1}</td>
+        <td><span class="estimate-part-chip">${escapeHtml(item.part_category)}</span></td>
+        <td><div class="product-name">${escapeHtml(item.product_name)}</div></td>
+        <td class="right"><span class="price">${fmt(item.latest_price)}</span></td>
+        <td class="right"><span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}</span></td>
+        <td>
+          <div class="estimate-bar-track" title="${Number(item.used_count).toLocaleString('ko-KR')}회">
+            <div class="estimate-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('') || `<tr><td colspan="6"><div class="loading" style="padding:30px">저장된 견적 데이터 없음</div></td></tr>`;
+}
+
+function renderEstimateCategoryOptions(categories) {
+  const selected = state.estimateCategory;
+  el.estimateCategorySelect.innerHTML = '<option value="">전체 품목</option>' + categories
+    .map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`)
+    .join('');
+  el.estimateCategorySelect.value = selected;
+}
+
+async function loadEstimateStats() {
+  el.estimateTableBody.innerHTML = `<tr><td colspan="6"><div class="loading">데이터 로딩 중...</div></td></tr>`;
+  const params = new URLSearchParams({ sort: state.estimateSort });
+  if (state.estimateCategory) params.set('part_category', state.estimateCategory);
+
+  try {
+    const res = await fetch(`/api/estimates/stats?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.estimateItems = data.items || [];
+    renderEstimateCategoryOptions(data.categories || []);
+    renderEstimateTable(state.estimateItems);
+
+    const latest = data.summary.latest_crawled_at
+      ? new Date(data.summary.latest_crawled_at).toLocaleString('ko-KR')
+      : '-';
+    el.estimateStatsBar.innerHTML = `
+      <span>저장 견적 <strong>${Number(data.summary.post_count || 0).toLocaleString('ko-KR')}건</strong></span>
+      <span>·</span>
+      <span>부품 행 <strong>${Number(data.summary.item_count || 0).toLocaleString('ko-KR')}개</strong></span>
+      <span>·</span>
+      <span>최근 수집 <strong>${latest}</strong></span>
+    `;
+  } catch (e) {
+    el.estimateTableBody.innerHTML = `<tr><td colspan="6"><div class="error-msg">⚠️ 로드 실패: ${e.message}</div></td></tr>`;
+  }
+}
+
+function showEstimates() {
+  hideAll();
+  el.estimatesSection.style.display = '';
+  loadEstimateStats();
 }
 
 const _loadedSections = {};
@@ -601,7 +695,9 @@ function showDdu() {
 async function show3dmark() {
   hideAll();
   el.markSection.style.display = '';
-  await loadHtmlSection(el.markSection, '/html/3DMark_260628_embed.html?v=1', 'mark-root');
+  delete _loadedSections['mark-root'];
+  el.markSection.innerHTML = '';
+  await loadHtmlSection(el.markSection, `/html/3DMark_260628_embed.html?v=${Date.now()}`, 'mark-root');
   requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 }
 
@@ -634,6 +730,8 @@ function switchTab(cat) {
     showTrend();
   } else if (cat === 'ddu') {
     showDdu();
+  } else if (cat === 'estimates') {
+    showEstimates();
   } else if (cat === '3dmark') {
     show3dmark();
   } else {
@@ -719,6 +817,16 @@ el.trendCatBtns.forEach(btn => {
 });
 
 el.trendSelect.addEventListener('change', loadTrendHistory);
+
+el.estimateSortSelect.addEventListener('change', () => {
+  state.estimateSort = el.estimateSortSelect.value;
+  loadEstimateStats();
+});
+
+el.estimateCategorySelect.addEventListener('change', () => {
+  state.estimateCategory = el.estimateCategorySelect.value;
+  loadEstimateStats();
+});
 
 // Days buttons
 document.querySelectorAll('.days-btn').forEach(btn => {

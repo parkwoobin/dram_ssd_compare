@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 로그인 | DRAM &amp; SSD 가격 비교</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <main class="admin-login-page">
+    <section class="admin-login-panel">
+      <div class="admin-login-header">
+        <h1>관리자 로그인</h1>
+        <a href="/">메인으로 돌아가기</a>
+      </div>
+      <form id="admin-login-form" class="admin-login-form">
+        <label for="admin-id">아이디</label>
+        <input id="admin-id" type="text" autocomplete="username" value="smtadmin" />
+        <label for="admin-password">비밀번호</label>
+        <input id="admin-password" type="password" autocomplete="current-password" />
+        <button id="admin-login-submit" type="submit" class="primary-action">로그인</button>
+      </form>
+      <p id="admin-login-message" class="admin-login-note">관리자 계정으로 로그인하세요.</p>
+    </section>
+  </main>
+  <script src="/static/js/admin-login.js?v=1"></script>
+</body>
+</html>

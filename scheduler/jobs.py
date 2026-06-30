@@ -10,6 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.engine import make_url
 
 from crawler.danawa import crawl as danawa_crawl, CATEGORIES as DANAWA_CATS
+from crawler.estimates import crawl_estimates
 from crawler.smtcom import crawl as smtcom_crawl
 from db.database import AsyncSessionLocal, DATABASE_URL
 from db.models import SourceEnum, CategoryEnum
@@ -20,6 +21,10 @@ from db.crud import (
     aggregate_daily_prices,
     seed_daily_prices_from_previous_day,
     prune_old_products,
+    DEFAULT_ESTIMATE_TARGET_NAMES,
+    get_existing_estimate_wr_ids,
+    get_estimate_settings,
+    save_estimate_crawl_results,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +35,12 @@ PRODUCT_RETENTION_DAYS = int(os.getenv("PRODUCT_RETENTION_DAYS", 7))
 DB_BACKUP_HOUR = int(os.getenv("DB_BACKUP_HOUR", 0))
 DB_BACKUP_DIR = Path(os.getenv("DB_BACKUP_DIR", "./data/backups"))
 DB_BACKUP_RETENTION_DAYS = int(os.getenv("DB_BACKUP_RETENTION_DAYS", 14))
+ESTIMATE_TARGET_NAMES = [
+    name.strip()
+    for name in os.getenv("ESTIMATE_TARGET_NAMES", ",".join(DEFAULT_ESTIMATE_TARGET_NAMES)).split(",")
+    if name.strip()
+]
+ESTIMATE_CRAWL_PAGES = int(os.getenv("ESTIMATE_CRAWL_PAGES", 3))
 
 
 async def _run_crawl(source: SourceEnum, category: str):
@@ -82,6 +93,28 @@ async def crawl_all(force: bool = False):
         tasks.append(_run_crawl(SourceEnum.smtcom, category))
     await asyncio.gather(*tasks, return_exceptions=True)
     logger.info("크롤링 완료")
+
+
+async def crawl_estimate_posts():
+    """스마트컴 상담 게시판에서 스마트 조립비 포함 새 견적글을 수집."""
+    try:
+        async with AsyncSessionLocal() as session:
+            known = await get_existing_estimate_wr_ids(session)
+            settings = await get_estimate_settings(session)
+        target_names = settings["names"] or ESTIMATE_TARGET_NAMES
+        results = await crawl_estimates(
+            target_names=target_names,
+            max_pages=ESTIMATE_CRAWL_PAGES,
+            known_wr_ids=known,
+            require_assembly=True,
+        )
+        async with AsyncSessionLocal() as session:
+            saved = await save_estimate_crawl_results(session, results)
+        logger.info("견적 게시판 크롤링 완료: %d개 저장", saved)
+        return saved
+    except Exception as e:
+        logger.error("견적 게시판 크롤링 실패: %s", e)
+        return 0
 
 
 async def aggregate_daily(target_date=None):
@@ -199,6 +232,13 @@ def create_scheduler() -> AsyncIOScheduler:
         backup_database,
         CronTrigger(hour=DB_BACKUP_HOUR, minute="0", timezone="Asia/Seoul"),
         id="backup_database",
+        replace_existing=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        crawl_estimate_posts,
+        CronTrigger(hour="*", minute="10", timezone="Asia/Seoul"),
+        id="crawl_estimate_posts",
         replace_existing=True,
         max_instances=1,
     )

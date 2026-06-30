@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRAM &amp; SSD 가격 비교 | 다나와 vs 스마트컴</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=2" />
-  <link rel="stylesheet" href="/static/css/style.css?v=8" />
+  <link rel="stylesheet" href="/static/css/style.css?v=11" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -25,6 +25,7 @@
     <button class="sidebar-tab-btn" data-cat="trend">📈 가격 추세</button>
     <button class="sidebar-tab-btn" data-cat="3dmark">📊 3DMark 성능 지표</button>
     <button class="sidebar-tab-btn" data-cat="ddu">🛠️ DDU 클린 설치 가이드</button>
+    <button class="sidebar-tab-btn" data-cat="estimates">🧾 견적 데이터 크롤링</button>
   </div>
 </nav>
 
@@ -45,6 +46,7 @@
     <button class="tab-btn" data-cat="trend">📈 가격 추세</button>
     <button class="tab-btn" data-cat="3dmark">📊 3DMark 성능 지표</button>
     <button class="tab-btn" data-cat="ddu">🛠️ DDU 클린 설치 가이드</button>
+    <button class="tab-btn" data-cat="estimates">🧾 견적 데이터 크롤링</button>
   </div>
 
   <!-- 비교 섹션 -->
@@ -139,6 +141,41 @@
   <!-- DDU 섹션 -->
   <div id="ddu-section" style="display:none"></div>
 
+  <!-- 견적 데이터 크롤링 섹션 -->
+  <div id="estimates-section" style="display:none">
+    <div class="estimate-controls">
+      <div class="estimate-filter-row">
+        <select id="estimate-category-select">
+          <option value="">전체 품목</option>
+        </select>
+        <select id="estimate-sort-select">
+          <option value="count_desc">사용 빈도 높은순</option>
+          <option value="count_asc">사용 빈도 낮은순</option>
+          <option value="name_asc">부품명 오름차순</option>
+          <option value="name_desc">부품명 내림차순</option>
+        </select>
+      </div>
+    </div>
+    <div id="estimate-stats-bar" class="stats-bar">—</div>
+    <div class="table-wrap estimate-table-wrap">
+      <table id="estimate-table">
+        <thead>
+          <tr>
+            <th class="center" style="width:64px">순위</th>
+            <th style="width:110px">품목</th>
+            <th>부품 명</th>
+            <th class="right" style="width:120px">최신 가격</th>
+            <th class="right" style="width:90px">갯수</th>
+            <th style="width:220px">그래프</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="6"><div class="loading">데이터 로딩 중...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- 추세 섹션 -->
   <div id="trend-section" style="display:none">
     <div class="trend-header">
@@ -182,8 +219,9 @@
     <img class="github-mark" src="https://github.githubassets.com/favicons/favicon.svg" alt="GitHub" />
     <span>기능 개선 건의</span>
   </a>
+  <a class="admin-login-link" href="/admin/login">관리자 로그인</a>
 </footer>
 
-<script src="/static/js/app.js?v=20"></script>
+<script src="/static/js/app.js?v=25"></script>
 </body>
 </html>
