@@ -460,8 +460,35 @@ async def get_smtcom_product_names(
 
 
 async def get_existing_estimate_wr_ids(session: AsyncSession) -> set[int]:
-    result = await session.execute(select(EstimatePost.wr_id))
+    result = await session.execute(
+        select(EstimatePost.wr_id).where(EstimatePost.posted_at.is_not(None))
+    )
     return set(result.scalars().all())
+
+
+async def get_estimate_wr_ids_missing_posted_at(session: AsyncSession, limit: int = 50) -> list[int]:
+    result = await session.execute(
+        select(EstimatePost.wr_id)
+        .where(EstimatePost.posted_at.is_(None))
+        .order_by(EstimatePost.crawled_at.desc(), EstimatePost.id.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def update_estimate_posted_at(session: AsyncSession, posted_at_by_wr_id: dict[int, datetime]) -> int:
+    updated = 0
+    for wr_id, posted_at in posted_at_by_wr_id.items():
+        result = await session.execute(
+            select(EstimatePost).where(EstimatePost.wr_id == wr_id)
+        )
+        post = result.scalar_one_or_none()
+        if post and post.posted_at is None:
+            post.posted_at = posted_at
+            updated += 1
+    if updated:
+        await session.commit()
+    return updated
 
 
 async def save_estimate_crawl_results(session: AsyncSession, results: list[dict]) -> int:
@@ -471,7 +498,13 @@ async def save_estimate_crawl_results(session: AsyncSession, results: list[dict]
         exists = await session.execute(
             select(EstimatePost).where(EstimatePost.wr_id == post_data["wr_id"])
         )
-        if exists.scalar_one_or_none():
+        existing_post = exists.scalar_one_or_none()
+        if existing_post:
+            if existing_post.posted_at is None and post_data.get("posted_at") is not None:
+                existing_post.posted_at = post_data["posted_at"]
+                existing_post.title = post_data.get("title") or existing_post.title
+                existing_post.author = post_data.get("author") or existing_post.author
+                existing_post.url = post_data.get("url") or existing_post.url
             continue
 
         post = EstimatePost(
@@ -500,7 +533,6 @@ async def save_estimate_crawl_results(session: AsyncSession, results: list[dict]
 
     await session.commit()
     return saved
-
 
 async def get_estimate_stats(
     session: AsyncSession,
@@ -555,6 +587,32 @@ async def get_estimate_summary(session: AsyncSession) -> dict:
         "item_count": item_count or 0,
         "latest_crawled_at": latest,
     }
+
+
+async def get_estimate_posts_by_author(session: AsyncSession, limit: int = 500) -> list[dict]:
+    result = await session.execute(
+        select(EstimatePost)
+        .order_by(
+            EstimatePost.author.asc(),
+            EstimatePost.posted_at.desc(),
+            EstimatePost.crawled_at.desc(),
+            EstimatePost.id.desc(),
+        )
+        .limit(limit)
+    )
+    groups: dict[str, dict] = {}
+    for post in result.scalars().all():
+        author = (post.author or "글쓴이 없음").strip() or "글쓴이 없음"
+        group = groups.setdefault(author, {"author": author, "post_count": 0, "posts": []})
+        group["post_count"] += 1
+        group["posts"].append({
+            "wr_id": post.wr_id,
+            "title": post.title,
+            "url": post.url,
+            "posted_at": post.posted_at,
+            "crawled_at": post.crawled_at,
+        })
+    return sorted(groups.values(), key=lambda row: (-row["post_count"], _natural_sort_key(row["author"])))
 
 
 async def get_estimate_settings(session: AsyncSession) -> dict:

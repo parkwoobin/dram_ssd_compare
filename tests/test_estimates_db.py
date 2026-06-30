@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from db.crud import get_estimate_stats
+from db.crud import get_estimate_posts_by_author, get_estimate_wr_ids_missing_posted_at, get_estimate_stats, update_estimate_posted_at
 from db.models import Base, EstimateItem, EstimatePost
 
 
@@ -53,3 +53,34 @@ async def test_estimate_stats_uses_latest_crawled_price(tmp_path):
     assert len(stats) == 1
     assert stats[0]["used_count"] == 2
     assert stats[0]["latest_price"] == 280000
+
+
+@pytest.mark.asyncio
+async def test_estimate_posted_at_backfill_helpers(tmp_path):
+    db_path = tmp_path / "estimate_dates.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    crawled_at = datetime(2026, 6, 30, 1, 0, tzinfo=timezone.utc)
+    posted_at = datetime(2026, 6, 28, 18, 28, tzinfo=timezone.utc)
+
+    async with session_factory() as session:
+        session.add(EstimatePost(
+            wr_id=76985,
+            title="견적",
+            author="모루",
+            url="https://example.test/76985",
+            crawled_at=crawled_at,
+        ))
+        await session.commit()
+
+        assert await get_estimate_wr_ids_missing_posted_at(session) == [76985]
+        assert await update_estimate_posted_at(session, {76985: posted_at}) == 1
+        assert await get_estimate_wr_ids_missing_posted_at(session) == []
+
+        groups = await get_estimate_posts_by_author(session)
+
+    assert groups[0]["posts"][0]["posted_at"] == posted_at.replace(tzinfo=None)
