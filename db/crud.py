@@ -1,11 +1,14 @@
+import json
 import re
 from datetime import datetime, timezone, timedelta, date as date_type
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, asc, delete, or_
-from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum
+from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum, EstimatePost, EstimateItem, AppSetting
 
 
 _NATURAL_SORT_RE = re.compile(r"(\d+)")
+ESTIMATE_SETTINGS_KEY = "estimate_crawler"
+DEFAULT_ESTIMATE_TARGET_NAMES = ["모루", "궁금", "엣지", "ㅁㄹ", "사카밤", "멜"]
 
 
 def _natural_sort_key(value: str) -> list:
@@ -454,3 +457,141 @@ async def get_smtcom_product_names(
         )
     )
     return [r[0] for r in result.all()]
+
+
+async def get_existing_estimate_wr_ids(session: AsyncSession) -> set[int]:
+    result = await session.execute(select(EstimatePost.wr_id))
+    return set(result.scalars().all())
+
+
+async def save_estimate_crawl_results(session: AsyncSession, results: list[dict]) -> int:
+    saved = 0
+    for result in results:
+        post_data = result["post"]
+        exists = await session.execute(
+            select(EstimatePost).where(EstimatePost.wr_id == post_data["wr_id"])
+        )
+        if exists.scalar_one_or_none():
+            continue
+
+        post = EstimatePost(
+            wr_id=post_data["wr_id"],
+            title=post_data.get("title"),
+            author=post_data.get("author"),
+            url=post_data["url"],
+            posted_at=post_data.get("posted_at"),
+            crawled_at=post_data.get("crawled_at") or datetime.now(timezone.utc),
+        )
+        session.add(post)
+        await session.flush()
+
+        for item in result["items"]:
+            session.add(EstimateItem(
+                post_id=post.id,
+                wr_id=post.wr_id,
+                part_category=item["part_category"],
+                product_name=item["product_name"],
+                quantity=item.get("quantity"),
+                unit_price=item.get("unit_price"),
+                total_price=item.get("total_price"),
+                crawled_at=post.crawled_at,
+            ))
+        saved += 1
+
+    await session.commit()
+    return saved
+
+
+async def get_estimate_stats(
+    session: AsyncSession,
+    part_category: str | None = None,
+    sort: str = "count_desc",
+    limit: int = 500,
+) -> list[dict]:
+    stmt = select(EstimateItem)
+    if part_category:
+        stmt = stmt.where(EstimateItem.part_category == part_category)
+    stmt = stmt.order_by(
+        EstimateItem.crawled_at.desc(),
+        EstimateItem.id.desc(),
+    )
+
+    result = await session.execute(stmt)
+    stats: dict[tuple[str, str], dict] = {}
+    for item in result.scalars().all():
+        key = (item.part_category, item.product_name)
+        if key not in stats:
+            stats[key] = {
+                "part_category": item.part_category,
+                "product_name": item.product_name,
+                "latest_price": item.unit_price,
+                "latest_total_price": item.total_price,
+                "latest_crawled_at": item.crawled_at,
+                "used_count": 0,
+                "quantity_count": 0,
+            }
+        stats[key]["used_count"] += 1
+        stats[key]["quantity_count"] += item.quantity or 0
+
+    rows = list(stats.values())
+    if sort == "count_asc":
+        rows.sort(key=lambda row: (row["used_count"], _natural_sort_key(row["product_name"])))
+    elif sort == "name_asc":
+        rows.sort(key=lambda row: _natural_sort_key(row["product_name"]))
+    elif sort == "name_desc":
+        rows.sort(key=lambda row: _natural_sort_key(row["product_name"]), reverse=True)
+    else:
+        rows.sort(key=lambda row: (-row["used_count"], _natural_sort_key(row["product_name"])))
+
+    return rows[:limit]
+
+
+async def get_estimate_summary(session: AsyncSession) -> dict:
+    post_count = await session.scalar(select(func.count()).select_from(EstimatePost))
+    item_count = await session.scalar(select(func.count()).select_from(EstimateItem))
+    latest = await session.scalar(select(func.max(EstimatePost.crawled_at)))
+    return {
+        "post_count": post_count or 0,
+        "item_count": item_count or 0,
+        "latest_crawled_at": latest,
+    }
+
+
+async def get_estimate_settings(session: AsyncSession) -> dict:
+    result = await session.execute(
+        select(AppSetting).where(AppSetting.setting_key == ESTIMATE_SETTINGS_KEY)
+    )
+    setting = result.scalar_one_or_none()
+    if not setting:
+        return {"names": DEFAULT_ESTIMATE_TARGET_NAMES.copy()}
+    try:
+        data = json.loads(setting.setting_value)
+    except json.JSONDecodeError:
+        return {"names": DEFAULT_ESTIMATE_TARGET_NAMES.copy()}
+
+    names = data.get("names")
+    if not isinstance(names, list):
+        names = []
+    cleaned = [str(name).strip() for name in names if str(name).strip()]
+    return {"names": cleaned or DEFAULT_ESTIMATE_TARGET_NAMES.copy()}
+
+
+async def save_estimate_settings(session: AsyncSession, names: list[str]) -> dict:
+    cleaned = [name.strip() for name in names if name.strip()]
+    payload = json.dumps({"names": cleaned}, ensure_ascii=False)
+    result = await session.execute(
+        select(AppSetting).where(AppSetting.setting_key == ESTIMATE_SETTINGS_KEY)
+    )
+    setting = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    if setting:
+        setting.setting_value = payload
+        setting.updated_at = now
+    else:
+        session.add(AppSetting(
+            setting_key=ESTIMATE_SETTINGS_KEY,
+            setting_value=payload,
+            updated_at=now,
+        ))
+    await session.commit()
+    return {"names": cleaned}

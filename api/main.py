@@ -4,15 +4,15 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi import HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from dotenv import load_dotenv
 from sqlalchemy import text
 
 from db.database import init_db, AsyncSessionLocal
-from api.routes import compare, trend
+from api.routes import admin, compare, estimates, trend
 from scheduler.jobs import create_scheduler, crawl_all
 
 load_dotenv()
@@ -76,6 +76,8 @@ app = FastAPI(title="DRAM & SSD 가격 비교", lifespan=lifespan)
 
 app.include_router(compare.router, prefix="/api")
 app.include_router(trend.router, prefix="/api")
+app.include_router(estimates.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 
 # 프론트엔드 정적 파일
 app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")
@@ -85,6 +87,26 @@ app.mount("/html", NoCacheStaticFiles(directory=str(BASE_DIR / "HTML")), name="h
 @app.get("/")
 async def root():
     response = FileResponse(str(FRONTEND_DIR / "index.html"))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
+@app.get("/admin/login")
+async def admin_login():
+    response = FileResponse(str(FRONTEND_DIR / "admin-login.html"))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
+@app.get("/admin")
+async def admin_root(request: Request):
+    if not admin.is_admin_request(request):
+        return RedirectResponse("/admin/login", status_code=303)
+    response = FileResponse(str(FRONTEND_DIR / "admin.html"))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"

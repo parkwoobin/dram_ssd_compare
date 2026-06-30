@@ -3,6 +3,7 @@ import asyncio
 import pytest
 from crawler.danawa import crawl as danawa_crawl
 from crawler.smtcom import crawl as smtcom_crawl
+from crawler.estimates import _matches_names, has_assembly_fee, latest_posts_by_author, parse_estimate_detail
 from crawler.matcher import match_products, _storage_gb, _ddr_gen, _extract_brand
 
 
@@ -97,6 +98,51 @@ def test_match_allows_laptop_ddr5_5600_pc5_44800():
     smt = [{"name": "삼성전자 노트북 DDR5-5600 (8GB) PC5-44800", "price": 27000, "smtcom_id": "1"}]
     result = match_products(dw, smt, category="memory")
     assert result[0]["smtcom"] is not None
+
+
+def test_parse_estimate_detail_extracts_target_parts():
+    html = """
+    <table>
+      <tr><th>품목명</th><th>이미지</th><th>상품명</th><th>수량</th><th>가격</th><th>합계</th></tr>
+      <tr><td>CPU</td><td></td><td>[AMD] AMD 라이젠7-6세대 9800X3D</td><td>1개</td><td>638,500원</td><td>638,500원</td></tr>
+      <tr><td>메모리</td><td></td><td>[PATRIOT] DDR5-6000 16GB</td><td>2개</td><td>305,000원</td><td>610,000원</td></tr>
+      <tr><td>쿨러/튜닝</td><td></td><td>[ARCTIC] P12 Pro</td><td>7개</td><td>9,900원</td><td>69,300원</td></tr>
+      <tr><td>모니터</td><td></td><td>수집 대상 아님</td><td>1개</td><td>1원</td><td>1원</td></tr>
+    </table>
+    """
+    items = parse_estimate_detail(html, 76972)
+
+    assert [item["part_category"] for item in items] == ["CPU", "메모리", "쿨러"]
+    assert items[0]["product_name"] == "[AMD] AMD 라이젠7-6세대 9800X3D"
+    assert items[1]["quantity"] == 2
+    assert items[2]["total_price"] == 69300
+
+
+def test_estimate_name_filter_checks_author_only():
+    assert _matches_names({"author": "홍길동123", "title": "견적 상담"}, ["홍길동"])
+    assert not _matches_names({"author": "김철수", "title": "홍길동님 견적"}, ["홍길동"])
+
+
+def test_has_assembly_fee_checks_detail_rows():
+    html = """
+    <table>
+      <tr><td>조립비</td><td>컴퓨터 조립 서비스</td><td>1개</td><td>30,000원</td></tr>
+    </table>
+    """
+    assert has_assembly_fee(html)
+    assert not has_assembly_fee("<table><tr><td>조립 문의</td><td>가격 없음</td></tr></table>")
+
+
+def test_latest_posts_by_author_keeps_only_newest_per_author():
+    posts = [
+        {"wr_id": 103, "author": "홍길동", "title": "최신"},
+        {"wr_id": 102, "author": "김철수", "title": "다른 사람"},
+        {"wr_id": 101, "author": "홍길동", "title": "이전"},
+    ]
+
+    latest = latest_posts_by_author(posts, [])
+
+    assert [post["wr_id"] for post in latest] == [103, 102]
 
 
 def test_match_rejects_used_laptop_memory_to_new_laptop_memory():
