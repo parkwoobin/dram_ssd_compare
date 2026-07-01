@@ -83,6 +83,41 @@ header {
   justify-content: space-between;
 }
 header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+header .admin-login-link {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+}
+.header-actions,
+.main-admin-session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.main-admin-session[hidden] {
+  display: none;
+}
+
+.admin-header-link {
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-header-link:hover {
+  color: var(--primary);
+}
+
+.admin-header-actions,
+.admin-header-session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* last-updated moved to footer */
 .theme-toggle-btn {
   width: 36px; height: 36px;
@@ -98,6 +133,26 @@ header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
 }
 .theme-toggle-btn:hover { border-color: var(--gray-400); background: var(--gray-100); }
 body[data-theme="dark"] .theme-toggle-btn { background: #1f2937; border-color: #374151; }
+
+@media (max-width: 720px) {
+  header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .main-admin-session {
+    display: none;
+  }
+
+  .admin-header-session {
+    display: none;
+  }
+}
 
 /* ── Container ───────────────────────────────────────────────── */
 .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
@@ -527,6 +582,7 @@ body[data-theme="dark"] .icon-action {
   font-family: inherit;
   outline: none;
   background: #fff;
+  color: var(--gray-900);
 }
 
 .estimate-settings-summary {
@@ -761,6 +817,39 @@ body[data-theme="dark"] .sidebar { background: #1f2937; }
   padding: 12px 12px;
   gap: 4px;
 }
+
+.sidebar-admin-session {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin: auto 12px 16px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--gray-200);
+}
+
+.sidebar-admin-session[hidden] {
+  display: none;
+}
+
+.sidebar-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.sidebar-admin-link {
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.sidebar-admin-link:hover {
+  color: var(--primary);
+}
+
 .sidebar-tab-btn {
   text-align: left;
   padding: 12px 14px;
@@ -819,6 +908,26 @@ body[data-theme="dark"] .sidebar { background: #1f2937; }
 
 .admin-login-link:hover {
   color: var(--primary);
+}
+
+.admin-session-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+body[data-theme="dark"] .admin-session-status {
+  color: #6ee7b7;
+  border-color: rgba(110, 231, 183, 0.28);
+  background: rgba(16, 185, 129, 0.16);
 }
 
 .github-mark {
@@ -943,6 +1052,35 @@ body[data-theme="dark"] .admin-login-form input {
   max-width: 320px;
 }
 
+#admin-product-source {
+  width: 180px;
+  height: 40px;
+  padding: 0 38px 0 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  color: var(--gray-900);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+#admin-product-source:focus {
+  border-color: var(--primary);
+}
+
+#admin-product-search {
+  height: 40px;
+}
+
 .admin-form-grid {
   display: grid;
   grid-template-columns: 130px minmax(240px, 1fr);
@@ -992,10 +1130,16 @@ body[data-theme="dark"] .admin-login-form input {
 
 body[data-theme="dark"] .admin-input,
 body[data-theme="dark"] .admin-cell-input,
+body[data-theme="dark"] #admin-product-source,
 body[data-theme="dark"] .admin-form-grid select,
 body[data-theme="dark"] #admin-estimate-author-keywords {
-  background: #111827;
+  background-color: #111827;
   border-color: #374151;
+  color: #f9fafb;
+}
+
+body[data-theme="dark"] #admin-product-source {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f9fafb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 body[data-theme="dark"] .admin-estimate-author {

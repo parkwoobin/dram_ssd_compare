@@ -84,3 +84,47 @@ async def test_estimate_posted_at_backfill_helpers(tmp_path):
         groups = await get_estimate_posts_by_author(session)
 
     assert groups[0]["posts"][0]["posted_at"] == posted_at.replace(tzinfo=None)
+
+
+@pytest.mark.asyncio
+async def test_estimate_posts_by_author_orders_authors_by_latest_post(tmp_path):
+    db_path = tmp_path / "estimate_author_order.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        session.add_all([
+            EstimatePost(
+                wr_id=1,
+                title="이전 견적",
+                author="모루",
+                url="https://example.test/1",
+                posted_at=datetime(2026, 6, 28, 18, 0),
+                crawled_at=datetime(2026, 6, 30, 1, 0),
+            ),
+            EstimatePost(
+                wr_id=2,
+                title="최신 견적",
+                author="궁금",
+                url="https://example.test/2",
+                posted_at=datetime(2026, 6, 30, 12, 0),
+                crawled_at=datetime(2026, 6, 30, 12, 5),
+            ),
+            EstimatePost(
+                wr_id=3,
+                title="모루 추가 견적",
+                author="모루",
+                url="https://example.test/3",
+                posted_at=datetime(2026, 6, 29, 9, 0),
+                crawled_at=datetime(2026, 6, 30, 2, 0),
+            ),
+        ])
+        await session.commit()
+
+        groups = await get_estimate_posts_by_author(session)
+
+    assert [group["author"] for group in groups] == ["궁금", "모루"]
+    assert [post["wr_id"] for post in groups[1]["posts"]] == [3, 1]

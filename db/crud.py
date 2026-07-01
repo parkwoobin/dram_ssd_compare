@@ -593,7 +593,6 @@ async def get_estimate_posts_by_author(session: AsyncSession, limit: int = 500) 
     result = await session.execute(
         select(EstimatePost)
         .order_by(
-            EstimatePost.author.asc(),
             EstimatePost.posted_at.desc(),
             EstimatePost.crawled_at.desc(),
             EstimatePost.id.desc(),
@@ -603,8 +602,16 @@ async def get_estimate_posts_by_author(session: AsyncSession, limit: int = 500) 
     groups: dict[str, dict] = {}
     for post in result.scalars().all():
         author = (post.author or "글쓴이 없음").strip() or "글쓴이 없음"
-        group = groups.setdefault(author, {"author": author, "post_count": 0, "posts": []})
+        latest_at = post.posted_at or post.crawled_at
+        group = groups.setdefault(author, {
+            "author": author,
+            "post_count": 0,
+            "posts": [],
+            "_latest_at": latest_at,
+        })
         group["post_count"] += 1
+        if latest_at and (group["_latest_at"] is None or latest_at > group["_latest_at"]):
+            group["_latest_at"] = latest_at
         group["posts"].append({
             "wr_id": post.wr_id,
             "title": post.title,
@@ -612,7 +619,12 @@ async def get_estimate_posts_by_author(session: AsyncSession, limit: int = 500) 
             "posted_at": post.posted_at,
             "crawled_at": post.crawled_at,
         })
-    return sorted(groups.values(), key=lambda row: (-row["post_count"], _natural_sort_key(row["author"])))
+    rows = list(groups.values())
+    rows.sort(key=lambda row: _natural_sort_key(row["author"]))
+    rows.sort(key=lambda row: row["_latest_at"] or datetime.min, reverse=True)
+    for row in rows:
+        row.pop("_latest_at", None)
+    return rows
 
 
 async def get_estimate_settings(session: AsyncSession) -> dict:

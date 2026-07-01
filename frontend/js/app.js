@@ -45,6 +45,10 @@ const el = {
   estimateSortSelect: document.getElementById('estimate-sort-select'),
   estimateStatsBar: document.getElementById('estimate-stats-bar'),
   estimateTableBody: document.querySelector('#estimate-table tbody'),
+  mainAdminSession: document.getElementById('main-admin-session'),
+  mainAdminLogout: document.getElementById('main-admin-logout'),
+  sidebarAdminSession: document.getElementById('sidebar-admin-session'),
+  sidebarAdminLogout: document.getElementById('sidebar-admin-logout'),
 };
 
 // ── Theme ─────────────────────────────────────────────────────
@@ -75,6 +79,40 @@ if (_themeToggleBtn) {
     _themeToggleBtn.textContent = next === 'dark' ? '🌙' : '☀️';
     broadcastTheme(next);
   });
+}
+
+async function refreshAdminSessionStatus() {
+  const sessionBlocks = [el.mainAdminSession, el.sidebarAdminSession].filter(Boolean);
+  if (!sessionBlocks.length) return;
+  try {
+    const res = await fetch('/api/admin/session');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    sessionBlocks.forEach(block => {
+      block.hidden = !data.logged_in;
+    });
+  } catch (error) {
+    sessionBlocks.forEach(block => {
+      block.hidden = true;
+    });
+  }
+}
+
+async function logoutMainAdmin() {
+  const logoutButtons = [el.mainAdminLogout, el.sidebarAdminLogout].filter(Boolean);
+  logoutButtons.forEach(button => {
+    button.disabled = true;
+    button.textContent = '로그아웃 중...';
+  });
+  try {
+    await fetch('/api/admin/logout', { method: 'POST' });
+  } finally {
+    logoutButtons.forEach(button => {
+      button.disabled = false;
+      button.textContent = '로그아웃';
+    });
+    refreshAdminSessionStatus();
+  }
 }
 
 let trendChartInstance = null;
@@ -689,7 +727,9 @@ async function loadHtmlSection(sectionEl, url, wrapClass) {
 function showDdu() {
   hideAll();
   el.dduSection.style.display = '';
-  loadHtmlSection(el.dduSection, '/html/DDU%20%EB%93%9C%EB%9D%BC%EC%9D%B4%EB%B2%84%20%ED%81%B4%EB%A6%B0%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C.html', 'ddu-root');
+  delete _loadedSections['ddu-root'];
+  el.dduSection.innerHTML = '';
+  loadHtmlSection(el.dduSection, `/html/DDU%20%EB%93%9C%EB%9D%BC%EC%9D%B4%EB%B2%84%20%ED%81%B4%EB%A6%B0%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C.html?v=${Date.now()}`, 'ddu-root');
 }
 
 async function show3dmark() {
@@ -828,6 +868,13 @@ el.estimateCategorySelect.addEventListener('change', () => {
   loadEstimateStats();
 });
 
+if (el.mainAdminLogout) {
+  el.mainAdminLogout.addEventListener('click', logoutMainAdmin);
+}
+if (el.sidebarAdminLogout) {
+  el.sidebarAdminLogout.addEventListener('click', logoutMainAdmin);
+}
+
 // Days buttons
 document.querySelectorAll('.days-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -842,4 +889,5 @@ document.querySelectorAll('.days-btn').forEach(btn => {
 // Prevent Enter key from accidentally activating first button: ensure buttons are non-submit
 document.querySelectorAll('button').forEach(b => b.setAttribute('type', 'button'));
 
+refreshAdminSessionStatus();
 fetchAndRender();

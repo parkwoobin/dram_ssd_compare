@@ -6,6 +6,17 @@ const adminLoginPassword = document.getElementById('admin-password');
 const adminLoginSubmit = document.getElementById('admin-login-submit');
 const adminLoginMessage = document.getElementById('admin-login-message');
 
+async function redirectIfLoggedIn() {
+  try {
+    const res = await fetch('/api/admin/session');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.logged_in) location.replace('/admin');
+  } catch (error) {
+    // Stay on the login page if the session check is unavailable.
+  }
+}
+
 adminLoginForm.addEventListener('submit', async event => {
   event.preventDefault();
   adminLoginSubmit.disabled = true;
@@ -30,3 +41,5 @@ adminLoginForm.addEventListener('submit', async event => {
     adminLoginSubmit.textContent = '로그인';
   }
 });
+
+redirectIfLoggedIn();
