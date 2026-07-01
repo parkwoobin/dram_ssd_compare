@@ -83,36 +83,34 @@ app.include_router(admin.router, prefix="/api")
 app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")
 app.mount("/html", NoCacheStaticFiles(directory=str(BASE_DIR / "HTML")), name="html")
 
+MAIN_TABS = {"memory", "ssd", "trend", "3dmark", "ddu", "estimates"}
 
-@app.get("/")
-async def root():
-    response = FileResponse(str(FRONTEND_DIR / "index.html"))
+
+def _no_cache_frontend_response(filename: str) -> FileResponse:
+    response = FileResponse(str(FRONTEND_DIR / filename))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+@app.get("/")
+async def root():
+    return _no_cache_frontend_response("index.html")
 
 
 @app.get("/admin/login")
 async def admin_login(request: Request):
     if admin.is_admin_request(request):
         return RedirectResponse("/admin", status_code=303)
-    response = FileResponse(str(FRONTEND_DIR / "admin-login.html"))
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
+    return _no_cache_frontend_response("admin-login.html")
 
 
 @app.get("/admin")
 async def admin_root(request: Request):
     if not admin.is_admin_request(request):
         return RedirectResponse("/admin/login", status_code=303)
-    response = FileResponse(str(FRONTEND_DIR / "admin.html"))
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
+    return _no_cache_frontend_response("admin.html")
 
 
 @app.get("/favicon.ico")
@@ -133,3 +131,19 @@ async def readiness():
         return {"status": "ready"}
     except Exception as e:
         raise HTTPException(status_code=503, detail={"status": "not_ready", "reason": str(e)})
+
+
+@app.get("/admin/{admin_tab}")
+async def admin_tab(request: Request, admin_tab: str):
+    if admin_tab not in MAIN_TABS:
+        raise HTTPException(status_code=404, detail="Not found")
+    if not admin.is_admin_request(request):
+        return RedirectResponse("/admin/login", status_code=303)
+    return _no_cache_frontend_response("admin.html")
+
+
+@app.get("/{main_tab}")
+async def main_tab(main_tab: str):
+    if main_tab not in MAIN_TABS:
+        raise HTTPException(status_code=404, detail="Not found")
+    return _no_cache_frontend_response("index.html")

@@ -102,7 +102,7 @@ header .admin-login-link {
 .admin-header-link {
   color: var(--gray-600);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 400;
   text-decoration: none;
   white-space: nowrap;
 }
