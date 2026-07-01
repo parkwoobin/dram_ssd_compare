@@ -32,6 +32,11 @@ const adminEl = {
   markHtml: document.getElementById('admin-3dmark-html'),
   markSave: document.getElementById('admin-3dmark-save'),
   markStatus: document.getElementById('admin-3dmark-status'),
+  dduFile: document.getElementById('admin-ddu-file'),
+  dduImport: document.getElementById('admin-ddu-import'),
+  dduHtml: document.getElementById('admin-ddu-html'),
+  dduSave: document.getElementById('admin-ddu-save'),
+  dduStatus: document.getElementById('admin-ddu-status'),
   estimateAuthorKeywords: document.getElementById('admin-estimate-author-keywords'),
   estimateSettingsSave: document.getElementById('admin-estimate-settings-save'),
   estimateSettingsSummary: document.getElementById('admin-estimate-settings-summary'),
@@ -39,7 +44,21 @@ const adminEl = {
   estimateStatus: document.getElementById('admin-estimate-status'),
   estimatePosts: document.getElementById('admin-estimate-posts'),
   logout: document.getElementById('admin-logout'),
+  sidebarLogout: document.getElementById('admin-sidebar-logout'),
+  themeToggle: document.getElementById('admin-theme-toggle'),
 };
+
+function applyAdminTheme(theme) {
+  document.body.dataset.theme = theme;
+  localStorage.setItem('site_theme', theme);
+  if (adminEl.themeToggle) adminEl.themeToggle.textContent = theme === 'dark' ? '🌙' : '☀️';
+}
+
+(function initAdminTheme() {
+  const saved = localStorage.getItem('site_theme');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyAdminTheme(saved ?? (systemDark ? 'dark' : 'light'));
+})();
 
 function adminFmt(n) {
   if (n == null || n === '') return '';
@@ -86,6 +105,7 @@ function showAdminSection(tab) {
   if (tab === 'memory' || tab === 'ssd') loadAdminProducts();
   if (tab === 'trend') loadAdminTrend();
   if (tab === '3dmark') load3dmarkHtml();
+  if (tab === 'ddu') loadDduHtml();
   if (tab === 'estimates') loadAdminEstimateSettings();
 }
 
@@ -220,6 +240,50 @@ async function handle3dmarkFileChange() {
   }
 }
 
+async function loadDduHtml() {
+  adminEl.dduHtml.value = '불러오는 중...';
+  const res = await adminFetch('/api/admin/ddu-html');
+  const data = await res.json();
+  adminEl.dduHtml.value = data.html || '';
+  adminEl.dduStatus.textContent = '현재 적용된 HTML을 불러왔습니다';
+}
+
+async function saveDduHtml() {
+  adminEl.dduSave.disabled = true;
+  adminEl.dduStatus.textContent = '적용 중...';
+  const res = await adminFetch('/api/admin/ddu-html', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ html: adminEl.dduHtml.value }),
+  });
+  adminEl.dduSave.disabled = false;
+  adminEl.dduStatus.textContent = res.ok
+    ? '공개 DDU 탭에 적용했습니다'
+    : '적용 실패';
+}
+
+async function importDduHtml() {
+  adminEl.dduFile.click();
+}
+
+async function handleDduFileChange() {
+  const file = adminEl.dduFile.files && adminEl.dduFile.files[0];
+  if (!file) return;
+  adminEl.dduImport.disabled = true;
+  adminEl.dduStatus.textContent = `${file.name} 불러오는 중...`;
+  try {
+    const html = await file.text();
+    adminEl.dduHtml.value = html;
+    await saveDduHtml();
+    adminEl.dduStatus.textContent = `${file.name} 적용 완료`;
+  } catch (e) {
+    adminEl.dduStatus.textContent = `불러오기 실패: ${e.message}`;
+  } finally {
+    adminEl.dduImport.disabled = false;
+    adminEl.dduFile.value = '';
+  }
+}
+
 function parseAdminEstimateKeywords(value) {
   return value
     .split(',')
@@ -322,7 +386,7 @@ function renderAdminEstimatePosts() {
     `).join('');
 
     return `
-      <details class="admin-estimate-author" ${index === 0 ? 'open' : ''}>
+      <details class="admin-estimate-author">
         <summary>
           <span>${adminEscape(group.author)}</span>
           <strong>${adminFmt(group.post_count)}개 견적</strong>
@@ -378,11 +442,20 @@ adminEl.trendSave.addEventListener('click', saveAdminTrend);
 adminEl.markImport.addEventListener('click', import3dmarkHtml);
 adminEl.markFile.addEventListener('change', handle3dmarkFileChange);
 adminEl.markSave.addEventListener('click', save3dmarkHtml);
+adminEl.dduImport.addEventListener('click', importDduHtml);
+adminEl.dduFile.addEventListener('change', handleDduFileChange);
+adminEl.dduSave.addEventListener('click', saveDduHtml);
 adminEl.estimateSettingsSave.addEventListener('click', saveAdminEstimateSettings);
 adminEl.estimateAuthorKeywords.addEventListener('keydown', e => {
   if (e.key === 'Enter') saveAdminEstimateSettings();
 });
 adminEl.estimateCrawl.addEventListener('click', crawlAdminEstimates);
 adminEl.logout.addEventListener('click', logoutAdmin);
+if (adminEl.sidebarLogout) adminEl.sidebarLogout.addEventListener('click', logoutAdmin);
+if (adminEl.themeToggle) {
+  adminEl.themeToggle.addEventListener('click', () => {
+    applyAdminTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark');
+  });
+}
 
 showAdminSection('memory');

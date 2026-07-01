@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>관리자 | DRAM &amp; SSD 가격 비교</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=2" />
-  <link rel="stylesheet" href="/static/css/style.css?v=14" />
+  <link rel="stylesheet" href="/static/css/style.css?v=21" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
@@ -25,6 +25,13 @@
       <button class="sidebar-tab-btn" data-admin-tab="ddu">🛠️ DDU 클린 설치 가이드</button>
       <button class="sidebar-tab-btn" data-admin-tab="estimates">🧾 견적 데이터 크롤링</button>
     </div>
+    <div class="sidebar-admin-session">
+      <div class="sidebar-admin-row">
+        <span class="admin-session-status">로그인 상태</span>
+        <a class="sidebar-admin-link" href="/">메인</a>
+      </div>
+      <button id="admin-sidebar-logout" class="filter-btn" type="button">로그아웃</button>
+    </div>
   </nav>
 
   <header>
@@ -32,9 +39,13 @@
       <button id="admin-hamburger-btn" class="hamburger-btn" title="메뉴">☰</button>
       <h1>관리자</h1>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <a class="admin-login-link" href="/">메인</a>
-      <button id="admin-logout" class="filter-btn" type="button">로그아웃</button>
+    <div class="admin-header-actions">
+      <div class="admin-header-session">
+        <span id="admin-session-status" class="admin-session-status">로그인 상태</span>
+        <a class="admin-login-link" href="/">메인</a>
+        <button id="admin-logout" class="filter-btn" type="button">로그아웃</button>
+      </div>
+      <button id="admin-theme-toggle" class="theme-toggle-btn" type="button" title="다크/라이트 모드 전환">☀️</button>
     </div>
   </header>
 
@@ -101,7 +112,15 @@
     </section>
 
     <section id="admin-ddu-section" class="admin-section" style="display:none">
-      <div class="trend-empty">관리 항목 없음</div>
+      <div class="estimate-controls">
+        <div class="admin-import-row">
+          <input id="admin-ddu-file" class="admin-file-input" type="file" accept=".html,.htm,text/html" />
+          <button id="admin-ddu-import" class="primary-action">HTML 불러오기</button>
+          <span id="admin-ddu-status" class="estimate-active-filter">불러온 HTML이 공개 DDU 탭에 표시됩니다</span>
+        </div>
+        <textarea id="admin-ddu-html" class="admin-code-editor" spellcheck="false"></textarea>
+        <button id="admin-ddu-save" class="filter-btn">현재 HTML 적용</button>
+      </div>
     </section>
 
     <section id="admin-estimates-section" class="admin-section" style="display:none">
@@ -125,6 +144,6 @@
     </section>
   </main>
 
-  <script src="/static/js/admin.js?v=5"></script>
+  <script src="/static/js/admin.js?v=13"></script>
 </body>
 </html>

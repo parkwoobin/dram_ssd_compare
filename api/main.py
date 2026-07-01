@@ -94,7 +94,9 @@ async def root():
 
 
 @app.get("/admin/login")
-async def admin_login():
+async def admin_login(request: Request):
+    if admin.is_admin_request(request):
+        return RedirectResponse("/admin", status_code=303)
     response = FileResponse(str(FRONTEND_DIR / "admin-login.html"))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"

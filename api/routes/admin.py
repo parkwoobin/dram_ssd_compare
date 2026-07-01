@@ -17,6 +17,7 @@ from db.models import AppSetting, CategoryEnum, Product, SourceEnum
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parents[2]
 MARK_HTML_PATH = BASE_DIR / "HTML" / "3DMark_260628_embed.html"
+DDU_HTML_PATH = BASE_DIR / "HTML" / "DDU 드라이버 클린설치 가이드.html"
 TREND_DEFAULTS_KEY = "trend_defaults"
 ADMIN_COOKIE_NAME = "admin_session"
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "smtadmin")
@@ -87,6 +88,11 @@ async def admin_login(payload: AdminLoginPayload, response: Response):
         max_age=60 * 60 * 24,
     )
     return {"status": "ok"}
+
+
+@router.get("/admin/session")
+async def admin_session(request: Request):
+    return {"logged_in": is_admin_request(request)}
 
 
 @router.post("/admin/logout")
@@ -206,4 +212,15 @@ async def get_3dmark_html(_admin=Depends(admin_required)):
 @router.put("/admin/3dmark-html")
 async def save_3dmark_html(payload: HtmlPayload, _admin=Depends(admin_required)):
     MARK_HTML_PATH.write_text(payload.html, encoding="utf-8")
+    return {"status": "ok", "bytes": len(payload.html.encode("utf-8"))}
+
+
+@router.get("/admin/ddu-html")
+async def get_ddu_html(_admin=Depends(admin_required)):
+    return {"html": DDU_HTML_PATH.read_text(encoding="utf-8")}
+
+
+@router.put("/admin/ddu-html")
+async def save_ddu_html(payload: HtmlPayload, _admin=Depends(admin_required)):
+    DDU_HTML_PATH.write_text(payload.html, encoding="utf-8")
     return {"status": "ok", "bytes": len(payload.html.encode("utf-8"))}
