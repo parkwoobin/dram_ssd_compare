@@ -17,6 +17,16 @@ const state = {
   estimateItems: [],
 };
 
+const MAIN_TAB_SLUGS = {
+  memory: 'memory',
+  ssd: 'ssd',
+  trend: 'trend',
+  '3dmark': '3dmark',
+  ddu: 'ddu',
+  estimates: 'estimates',
+};
+const MAIN_SLUG_TABS = Object.fromEntries(Object.entries(MAIN_TAB_SLUGS).map(([tab, slug]) => [slug, tab]));
+
 const el = {
   tabBtns: document.querySelectorAll('.tab-btn'),
   sortBtns: document.querySelectorAll('.sort-btn'),
@@ -760,8 +770,23 @@ if (_hamburgerBtn) _hamburgerBtn.addEventListener('click', openSidebar);
 if (_sidebarClose) _sidebarClose.addEventListener('click', closeSidebar);
 if (_sidebarOverlay) _sidebarOverlay.addEventListener('click', closeSidebar);
 
+function getInitialTabFromPath() {
+  const slug = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  return MAIN_SLUG_TABS[slug] || 'memory';
+}
+
+function updateMainTabUrl(cat) {
+  const slug = MAIN_TAB_SLUGS[cat] || MAIN_TAB_SLUGS.memory;
+  const nextPath = `/${slug}`;
+  if (window.location.pathname !== nextPath) {
+    history.pushState({ tab: cat }, '', nextPath);
+  }
+}
+
 // ── Tab switch helper ─────────────────────────────────────────
-function switchTab(cat) {
+function switchTab(cat, updateUrl = true) {
+  if (!MAIN_TAB_SLUGS[cat]) cat = 'memory';
+  if (updateUrl) updateMainTabUrl(cat);
   el.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
   document.querySelectorAll('.sidebar-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
 
@@ -875,6 +900,10 @@ if (el.sidebarAdminLogout) {
   el.sidebarAdminLogout.addEventListener('click', logoutMainAdmin);
 }
 
+window.addEventListener('popstate', () => {
+  switchTab(getInitialTabFromPath(), false);
+});
+
 // Days buttons
 document.querySelectorAll('.days-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -890,4 +919,4 @@ document.querySelectorAll('.days-btn').forEach(btn => {
 document.querySelectorAll('button').forEach(b => b.setAttribute('type', 'button'));
 
 refreshAdminSessionStatus();
-fetchAndRender();
+switchTab(getInitialTabFromPath(), false);

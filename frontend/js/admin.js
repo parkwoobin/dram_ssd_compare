@@ -7,6 +7,16 @@ const adminState = {
   estimatePostGroups: [],
 };
 
+const ADMIN_TAB_SLUGS = {
+  memory: 'memory',
+  ssd: 'ssd',
+  trend: 'trend',
+  '3dmark': '3dmark',
+  ddu: 'ddu',
+  estimates: 'estimates',
+};
+const ADMIN_SLUG_TABS = Object.fromEntries(Object.entries(ADMIN_TAB_SLUGS).map(([tab, slug]) => [slug, tab]));
+
 const adminEl = {
   tabs: document.querySelectorAll('[data-admin-tab]'),
   desktopTabs: document.querySelectorAll('.admin-tabs [data-admin-tab]'),
@@ -93,7 +103,22 @@ function closeAdminSidebar() {
   adminEl.sidebarOverlay.classList.remove('open');
 }
 
-function showAdminSection(tab) {
+function getInitialAdminTabFromPath() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return ADMIN_SLUG_TABS[parts[1]] || 'memory';
+}
+
+function updateAdminTabUrl(tab) {
+  const slug = ADMIN_TAB_SLUGS[tab] || ADMIN_TAB_SLUGS.memory;
+  const nextPath = `/admin/${slug}`;
+  if (window.location.pathname !== nextPath) {
+    history.pushState({ adminTab: tab }, '', nextPath);
+  }
+}
+
+function showAdminSection(tab, updateUrl = true) {
+  if (!ADMIN_TAB_SLUGS[tab]) tab = 'memory';
+  if (updateUrl) updateAdminTabUrl(tab);
   adminState.tab = tab;
   adminEl.tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.adminTab === tab));
   adminEl.productsSection.style.display = ['memory', 'ssd'].includes(tab) ? '' : 'none';
@@ -458,4 +483,8 @@ if (adminEl.themeToggle) {
   });
 }
 
-showAdminSection('memory');
+window.addEventListener('popstate', () => {
+  showAdminSection(getInitialAdminTabFromPath(), false);
+});
+
+showAdminSection(getInitialAdminTabFromPath(), false);
