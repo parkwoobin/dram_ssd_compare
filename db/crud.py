@@ -7,6 +7,7 @@ from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum, E
 
 
 _NATURAL_SORT_RE = re.compile(r"(\d+)")
+_BRAND_PREFIX_RE = re.compile(r"^\[[^\]]+\]\s*")
 ESTIMATE_SETTINGS_KEY = "estimate_crawler"
 ESTIMATE_NAME_OVERRIDES_KEY = "estimate_name_overrides"
 DEFAULT_ESTIMATE_TARGET_NAMES = ["모루", "궁금", "엣지", "ㅁㄹ", "사카밤", "멜"]
@@ -19,12 +20,37 @@ def _natural_sort_key(value: str) -> list:
     ]
 
 
+def _estimate_display_product_name(value: str | None) -> str:
+    return _BRAND_PREFIX_RE.sub("", str(value or "").strip()).strip()
+
+
+def _estimate_display_unit_price(item: EstimateItem) -> int | None:
+    unit_price = item.unit_price
+    total_price = item.total_price
+    quantity = item.quantity or 0
+    derived_unit_price = None
+    if total_price is not None and total_price > 0 and quantity > 0:
+        derived_unit_price = round(total_price / quantity)
+
+    if unit_price is None:
+        return derived_unit_price
+    if derived_unit_price is None:
+        return unit_price
+    if unit_price > 100_000_000:
+        return derived_unit_price
+    if total_price is not None and unit_price > total_price:
+        return derived_unit_price
+    if unit_price < 10_000 <= derived_unit_price:
+        return derived_unit_price
+    return unit_price
+
+
 def _clean_name_overrides(value: dict | None) -> dict[str, str]:
     if not isinstance(value, dict):
         return {}
     cleaned = {}
     for raw_name, override_name in value.items():
-        raw = str(raw_name).strip()
+        raw = _estimate_display_product_name(raw_name)
         override = str(override_name).strip()
         if raw and override:
             cleaned[raw] = override
@@ -576,13 +602,14 @@ async def get_estimate_stats(
     result = await session.execute(stmt)
     stats: dict[tuple[str, str], dict] = {}
     for item in result.scalars().all():
-        display_name = name_overrides.get(item.product_name, item.product_name)
+        original_display_name = _estimate_display_product_name(item.product_name)
+        display_name = name_overrides.get(original_display_name, original_display_name)
         key = (item.part_category, display_name)
         if key not in stats:
             stats[key] = {
                 "part_category": item.part_category,
                 "product_name": display_name,
-                "latest_price": item.unit_price,
+                "latest_price": _estimate_display_unit_price(item),
                 "latest_total_price": item.total_price,
                 "latest_crawled_at": item.crawled_at,
                 "used_count": 0,
@@ -642,22 +669,24 @@ async def save_estimate_name_overrides(session: AsyncSession, overrides: dict[st
 async def get_estimate_product_name_overrides(session: AsyncSession, limit: int = 1000) -> list[dict]:
     overrides = await get_estimate_name_overrides(session)
     result = await session.execute(
-        select(
-            EstimateItem.product_name,
-            func.count(EstimateItem.id).label("used_count"),
-        )
-        .group_by(EstimateItem.product_name)
-        .order_by(desc("used_count"), asc(EstimateItem.product_name))
-        .limit(limit)
+        select(EstimateItem.product_name)
     )
-    return [
-        {
-            "product_name": row.product_name,
-            "override_name": overrides.get(row.product_name, ""),
-            "used_count": row.used_count,
-        }
-        for row in result.all()
-    ]
+    rows: dict[str, dict] = {}
+    for product_name in result.scalars().all():
+        display_name = _estimate_display_product_name(product_name)
+        if not display_name:
+            continue
+        row = rows.setdefault(display_name, {
+            "product_name": display_name,
+            "override_name": overrides.get(display_name, ""),
+            "used_count": 0,
+        })
+        row["used_count"] += 1
+
+    return sorted(
+        rows.values(),
+        key=lambda row: (-row["used_count"], _natural_sort_key(row["product_name"])),
+    )[:limit]
 
 
 async def get_estimate_summary(session: AsyncSession) -> dict:

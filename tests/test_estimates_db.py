@@ -189,7 +189,8 @@ async def test_estimate_name_overrides_affect_stats_and_ignore_blank_values(tmp_
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    long_name = "[AMD] AMD 라이젠7-5세대 7800X3D (라파엘) (멀티팩(정품))"
+    raw_name = "[AMD] AMD 라이젠7-5세대 7800X3D (라파엘) (멀티팩(정품))"
+    clean_name = "AMD 라이젠7-5세대 7800X3D (라파엘) (멀티팩(정품))"
     async with session_factory() as session:
         post = EstimatePost(
             wr_id=20,
@@ -204,7 +205,7 @@ async def test_estimate_name_overrides_affect_stats_and_ignore_blank_values(tmp_
             post_id=post.id,
             wr_id=post.wr_id,
             part_category="CPU",
-            product_name=long_name,
+            product_name=raw_name,
             quantity=1,
             unit_price=450000,
             total_price=450000,
@@ -213,22 +214,72 @@ async def test_estimate_name_overrides_affect_stats_and_ignore_blank_values(tmp_
         await session.commit()
 
         saved = await save_estimate_name_overrides(session, {
-            long_name: "7800X3D",
+            raw_name: "7800X3D",
             "blank": "",
         })
         stats = await get_estimate_stats(session)
         rows = await get_estimate_product_name_overrides(session)
 
-    assert saved == {long_name: "7800X3D"}
+    assert saved == {clean_name: "7800X3D"}
     assert stats[0]["product_name"] == "7800X3D"
-    assert rows[0]["product_name"] == long_name
+    assert rows[0]["product_name"] == clean_name
     assert rows[0]["override_name"] == "7800X3D"
 
     async with session_factory() as session:
-        saved = await save_estimate_name_overrides(session, {long_name: ""})
+        saved = await save_estimate_name_overrides(session, {raw_name: ""})
         overrides = await get_estimate_name_overrides(session)
         stats = await get_estimate_stats(session)
 
     assert saved == {}
     assert overrides == {}
-    assert stats[0]["product_name"] == long_name
+    assert stats[0]["product_name"] == clean_name
+
+
+@pytest.mark.asyncio
+async def test_estimate_stats_sanitizes_legacy_bad_prices(tmp_path):
+    db_path = tmp_path / "estimate_bad_prices.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        post = EstimatePost(
+            wr_id=30,
+            title="견적",
+            author="모루",
+            url="https://example.test/30",
+            crawled_at=datetime(2026, 7, 2, 1, 0),
+        )
+        session.add(post)
+        await session.flush()
+        session.add_all([
+            EstimateItem(
+                post_id=post.id,
+                wr_id=post.wr_id,
+                part_category="메모리",
+                product_name="[마이크론] 마이크론 Crucial DDR5-5600 CL46 PRO 패키지 대원씨티에스",
+                quantity=1,
+                unit_price=5560046128642,
+                total_price=2962900,
+                crawled_at=post.crawled_at,
+            ),
+            EstimateItem(
+                post_id=post.id,
+                wr_id=post.wr_id,
+                part_category="메인보드",
+                product_name="ASUS PRIME B650EM-A 대원씨티에스",
+                quantity=1,
+                unit_price=650,
+                total_price=144000,
+                crawled_at=post.crawled_at,
+            ),
+        ])
+        await session.commit()
+
+        stats = await get_estimate_stats(session, sort="name_asc")
+
+    by_name = {row["product_name"]: row for row in stats}
+    assert by_name["마이크론 Crucial DDR5-5600 CL46 PRO 패키지 대원씨티에스"]["latest_price"] == 2962900
+    assert by_name["ASUS PRIME B650EM-A 대원씨티에스"]["latest_price"] == 144000
