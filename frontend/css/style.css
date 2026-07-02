@@ -51,7 +51,11 @@ body[data-theme="dark"] .trend-select,
 body[data-theme="dark"] #estimate-author-keywords,
 body[data-theme="dark"] #estimate-pages-select,
 body[data-theme="dark"] #estimate-category-select,
-body[data-theme="dark"] #estimate-sort-select { background: #1f2937; color: #f9fafb; border-color: #374151; }
+body[data-theme="dark"] #estimate-sort-select { background-color: #1f2937; color: #f9fafb; border-color: #374151; }
+body[data-theme="dark"] #estimate-category-select,
+body[data-theme="dark"] #estimate-sort-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f9fafb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
 body[data-theme="dark"] .tab-btn { background: #1f2937; border-color: #374151; color: #9ca3af; }
 body[data-theme="dark"] .sort-btn,
 body[data-theme="dark"] .filter-btn,
@@ -637,6 +641,11 @@ body[data-theme="dark"] .icon-action {
   gap: 8px;
 }
 
+.admin-estimate-posts[hidden],
+.estimate-name-panel[hidden] {
+  display: none;
+}
+
 .admin-estimate-author {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
@@ -780,13 +789,20 @@ body[data-theme="dark"] .icon-action {
 #estimate-category-select,
 #estimate-sort-select {
   min-width: 180px;
-  padding: 8px 34px 8px 10px;
+  padding: 8px 46px 8px 10px;
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
-  background: #fff;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
   color: var(--gray-900);
   font-size: 13px;
   font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .primary-action {
@@ -830,12 +846,26 @@ body[data-theme="dark"] .icon-action {
 }
 
 .estimate-count {
+  min-width: 0;
+  text-align: left;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.estimate-usage-heading-mobile {
+  display: none;
+}
+
+.estimate-usage-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .estimate-bar-track {
   width: 100%;
+  flex: 1 1 auto;
   height: 18px;
   border: 1px solid var(--gray-200);
   border-radius: 4px;
@@ -1206,12 +1236,19 @@ body[data-theme="dark"] .admin-login-form input {
 .admin-form-grid select {
   width: 100%;
   min-width: 0;
-  padding: 8px 34px 8px 10px;
+  padding: 8px 46px 8px 10px;
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
-  background: #fff;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
   color: var(--gray-900);
   font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .admin-import-row {
@@ -1248,6 +1285,10 @@ body[data-theme="dark"] #admin-estimate-author-keywords {
 }
 
 body[data-theme="dark"] #admin-product-source {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f9fafb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+body[data-theme="dark"] .admin-form-grid select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f9fafb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
@@ -1293,6 +1334,20 @@ body[data-theme="dark"] .admin-estimate-post-link {
 @media (max-width: 768px) {
   .product-name { max-width: 180px; }
   th:nth-child(5), td:nth-child(5) { display: none; }
+  #estimate-table .estimate-bar-track { display: none; }
+  #estimate-table .estimate-usage-cell { gap: 0; }
+  #estimate-table .estimate-usage-heading {
+    width: 64px !important;
+    min-width: 64px;
+    max-width: 64px;
+  }
+  #estimate-table td:last-child {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+  }
+  #estimate-table .estimate-usage-heading-desktop { display: none; }
+  #estimate-table .estimate-usage-heading-mobile { display: inline; }
   .hover-popup { display: none !important; }
   #trend-chart { height: 260px !important; }
   .github-link {

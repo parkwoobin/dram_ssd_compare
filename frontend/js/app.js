@@ -10,7 +10,7 @@ const state = {
   trendCategory: 'memory',
   trendDays: 7,
   estimateSort: 'count_desc',
-  estimateCategory: '',
+  estimateCategory: 'CPU',
   trendDefaults: {},
   loading: false,
   allItems: [],
@@ -648,29 +648,33 @@ function renderEstimateTable(items) {
     return `
       <tr>
         <td class="center">${idx + 1}</td>
-        <td><span class="estimate-part-chip">${escapeHtml(item.part_category)}</span></td>
         <td><div class="product-name">${escapeHtml(item.product_name)}</div></td>
         <td class="right"><span class="price">${fmt(item.latest_price)}</span></td>
-        <td class="right"><span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}</span></td>
         <td>
-          <div class="estimate-bar-track" title="${Number(item.used_count).toLocaleString('ko-KR')}회">
-            <div class="estimate-bar-fill" style="width:${pct}%"></div>
+          <div class="estimate-usage-cell" title="${Number(item.used_count).toLocaleString('ko-KR')}회">
+            <span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}</span>
+            <div class="estimate-bar-track">
+              <div class="estimate-bar-fill" style="width:${pct}%"></div>
+            </div>
           </div>
         </td>
       </tr>`;
-  }).join('') || `<tr><td colspan="6"><div class="loading" style="padding:30px">저장된 견적 데이터 없음</div></td></tr>`;
+  }).join('') || `<tr><td colspan="4"><div class="loading" style="padding:30px">저장된 견적 데이터 없음</div></td></tr>`;
 }
 
 function renderEstimateCategoryOptions(categories) {
+  if (!state.estimateCategory && categories.length) {
+    state.estimateCategory = categories.includes('CPU') ? 'CPU' : categories[0];
+  }
   const selected = state.estimateCategory;
-  el.estimateCategorySelect.innerHTML = '<option value="">전체 품목</option>' + categories
+  el.estimateCategorySelect.innerHTML = categories
     .map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`)
     .join('');
   el.estimateCategorySelect.value = selected;
 }
 
 async function loadEstimateStats() {
-  el.estimateTableBody.innerHTML = `<tr><td colspan="6"><div class="loading">데이터 로딩 중...</div></td></tr>`;
+  el.estimateTableBody.innerHTML = `<tr><td colspan="4"><div class="loading">데이터 로딩 중...</div></td></tr>`;
   const params = new URLSearchParams({ sort: state.estimateSort });
   if (state.estimateCategory) params.set('part_category', state.estimateCategory);
 
@@ -691,7 +695,7 @@ async function loadEstimateStats() {
       <span>최근 수집 <strong>${latest}</strong></span>
     `;
   } catch (e) {
-    el.estimateTableBody.innerHTML = `<tr><td colspan="6"><div class="error-msg">⚠️ 로드 실패: ${e.message}</div></td></tr>`;
+    el.estimateTableBody.innerHTML = `<tr><td colspan="4"><div class="error-msg">⚠️ 로드 실패: ${e.message}</div></td></tr>`;
   }
 }
 

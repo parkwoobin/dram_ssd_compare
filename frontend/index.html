@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRAM &amp; SSD 가격 비교 | 다나와 vs 스마트컴</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=2" />
-  <link rel="stylesheet" href="/static/css/style.css?v=22" />
+  <link rel="stylesheet" href="/static/css/style.css?v=27" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -160,7 +160,7 @@
     <div class="estimate-controls">
       <div class="estimate-filter-row">
         <select id="estimate-category-select">
-          <option value="">전체 품목</option>
+          <option value="CPU">CPU</option>
         </select>
         <select id="estimate-sort-select">
           <option value="count_desc">사용 빈도 높은순</option>
@@ -176,15 +176,16 @@
         <thead>
           <tr>
             <th class="center" style="width:64px">순위</th>
-            <th style="width:110px">품목</th>
             <th>부품 명</th>
             <th class="right" style="width:120px">최신 가격</th>
-            <th class="right" style="width:90px">갯수</th>
-            <th style="width:220px">그래프</th>
+            <th class="estimate-usage-heading" style="width:240px">
+              <span class="estimate-usage-heading-desktop">갯수 / 그래프</span>
+              <span class="estimate-usage-heading-mobile">갯수</span>
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="6"><div class="loading">데이터 로딩 중...</div></td></tr>
+          <tr><td colspan="4"><div class="loading">데이터 로딩 중...</div></td></tr>
         </tbody>
       </table>
     </div>
@@ -236,6 +237,6 @@
   <a class="admin-login-link" href="/admin">관리자 로그인</a>
 </footer>
 
-<script src="/static/js/app.js?v=30"></script>
+<script src="/static/js/app.js?v=32"></script>
 </body>
 </html>
