@@ -23,6 +23,7 @@ TARGET_CATEGORIES = {
 }
 ASSEMBLY_RE = re.compile(r"(조립\s*비|조립\s*서비스|PC\s*조립|컴퓨터\s*조립)", re.IGNORECASE)
 POSTED_AT_RE = re.compile(r"작성일\s*:?\s*(\d{2,4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})")
+PRICE_RE = re.compile(r"(\d{1,3}(?:,\d{3})+|\d+)\s*원")
 KST = timezone(timedelta(hours=9))
 
 HEADERS = {
@@ -42,6 +43,16 @@ def _clean_text(value: str | None) -> str:
 def _parse_int(value: str | None) -> int | None:
     nums = re.sub(r"[^\d]", "", value or "")
     return int(nums) if nums else None
+
+
+def _parse_price(value: str | None) -> int | None:
+    match = PRICE_RE.search(value or "")
+    return _parse_int(match.group(1)) if match else None
+
+
+def _clean_product_name(value: str | None) -> str:
+    text = _clean_text(value)
+    return re.sub(r"^\[[^\]]+\]\s*", "", text).strip()
 
 
 def _wr_id_from_url(url: str) -> int | None:
@@ -113,7 +124,7 @@ def _product_name_from_cells(cells: list[Tag]) -> str | None:
         if re.fullmatch(r"[\d,]+원?", text) or re.fullmatch(r"\d+개", text):
             continue
         if len(text) >= 4:
-            candidates.append(text)
+            candidates.append(_clean_product_name(text))
     return max(candidates, key=len) if candidates else None
 
 
@@ -136,7 +147,7 @@ def parse_estimate_detail(html: str, wr_id: int) -> list[dict]:
 
         texts = [_clean_text(cell.get_text(" ", strip=True)) for cell in cells]
         quantity = next((_parse_int(text) for text in texts if re.search(r"\d+\s*개", text)), None)
-        prices = [_parse_int(text) for text in texts if "원" in text and _parse_int(text) is not None]
+        prices = [price for text in texts if (price := _parse_price(text)) is not None]
 
         items.append(
             {

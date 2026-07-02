@@ -113,9 +113,27 @@ def test_parse_estimate_detail_extracts_target_parts():
     items = parse_estimate_detail(html, 76972)
 
     assert [item["part_category"] for item in items] == ["CPU", "메모리", "쿨러"]
-    assert items[0]["product_name"] == "[AMD] AMD 라이젠7-6세대 9800X3D"
+    assert items[0]["product_name"] == "AMD 라이젠7-6세대 9800X3D"
     assert items[1]["quantity"] == 2
     assert items[2]["total_price"] == 69300
+
+
+def test_parse_estimate_detail_ignores_won_in_product_name():
+    html = """
+    <table>
+      <tr><th>품목명</th><th>이미지</th><th>상품명</th><th>수량</th><th>가격</th><th>합계</th></tr>
+      <tr>
+        <td>메모리</td><td></td>
+        <td>[마이크론] 마이크론 Crucial DDR5-5600 CL46 PRO 패키지 대원씨티에스 (128GB(64Gx2))</td>
+        <td>1개</td><td></td><td>2,962,900원</td>
+      </tr>
+    </table>
+    """
+    items = parse_estimate_detail(html, 77031)
+
+    assert items[0]["product_name"] == "마이크론 Crucial DDR5-5600 CL46 PRO 패키지 대원씨티에스 (128GB(64Gx2))"
+    assert items[0]["unit_price"] == 2962900
+    assert items[0]["total_price"] == 2962900
 
 
 def test_parse_posted_at_from_estimate_detail():
