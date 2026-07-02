@@ -141,16 +141,18 @@ def test_has_assembly_fee_checks_detail_rows():
     assert not has_assembly_fee("<table><tr><td>조립 문의</td><td>가격 없음</td></tr></table>")
 
 
-def test_matching_posts_keeps_all_matching_posts():
+def test_matching_posts_keeps_latest_per_author_title():
     posts = [
-        {"wr_id": 103, "author": "홍길동", "title": "최신"},
-        {"wr_id": 102, "author": "김철수", "title": "다른 사람"},
-        {"wr_id": 101, "author": "홍길동", "title": "이전"},
+        {"wr_id": 105, "author": "홍길동", "title": "78"},
+        {"wr_id": 104, "author": "홍길동", "title": "다른 견적"},
+        {"wr_id": 103, "author": "김철수", "title": "78"},
+        {"wr_id": 102, "author": "홍길동", "title": "78"},
+        {"wr_id": 101, "author": "김철수", "title": "78"},
     ]
 
-    latest = matching_posts(posts, ["홍길동"])
+    latest = matching_posts(posts, ["홍길동", "김철수"])
 
-    assert [post["wr_id"] for post in latest] == [103, 101]
+    assert [post["wr_id"] for post in latest] == [105, 104, 103]
 
 
 def test_match_rejects_used_laptop_memory_to_new_laptop_memory():

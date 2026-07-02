@@ -590,6 +590,47 @@ body[data-theme="dark"] .icon-action {
   color: var(--gray-400);
 }
 
+.estimate-updated-row {
+  margin-top: -2px;
+}
+
+.estimate-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -2px 0 12px;
+}
+
+.estimate-pill-action {
+  height: 40px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gray-600);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.estimate-pill-action:hover {
+  border-color: var(--gray-400);
+  color: var(--gray-900);
+}
+
+.estimate-pill-action.active {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
 .admin-estimate-posts {
   display: flex;
   flex-direction: column;
@@ -665,6 +706,75 @@ body[data-theme="dark"] .icon-action {
 .admin-estimate-post-url:hover {
   color: var(--primary);
   text-decoration: underline;
+}
+
+.admin-estimate-delete {
+  margin-top: 8px;
+  color: var(--danger);
+}
+
+.admin-estimate-delete:hover {
+  border-color: var(--danger);
+  background: #fef2f2;
+}
+
+.estimate-name-panel {
+  margin-bottom: 14px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.estimate-name-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.estimate-name-panel-head strong {
+  font-size: 14px;
+}
+
+.estimate-name-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.estimate-name-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 340px) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+}
+
+.estimate-name-original {
+  min-width: 0;
+}
+
+.estimate-name-original strong {
+  display: block;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.estimate-name-original span {
+  display: block;
+  margin-top: 3px;
+  color: var(--gray-400);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.estimate-name-override {
+  max-width: none;
 }
 
 #estimate-category-select,
@@ -1146,6 +1256,24 @@ body[data-theme="dark"] .admin-estimate-author {
   border-color: #374151;
 }
 
+body[data-theme="dark"] .estimate-name-panel,
+body[data-theme="dark"] .estimate-name-row {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+body[data-theme="dark"] .estimate-pill-action {
+  background: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+body[data-theme="dark"] .estimate-pill-action.active {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: #fff;
+}
+
 body[data-theme="dark"] .admin-estimate-post-list,
 body[data-theme="dark"] .admin-estimate-post-link {
   border-color: #374151;
@@ -1153,6 +1281,10 @@ body[data-theme="dark"] .admin-estimate-post-link {
 
 @media (max-width: 768px) {
   .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .estimate-name-row {
     grid-template-columns: 1fr;
   }
 }

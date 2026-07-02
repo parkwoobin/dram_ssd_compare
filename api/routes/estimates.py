@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crawler.estimates import TARGET_CATEGORIES, crawl_estimates, fetch_posted_at_map
 from api.routes.admin import admin_required
 from db.crud import (
+    delete_estimate_post,
+    get_estimate_product_name_overrides,
     get_estimate_wr_ids_missing_posted_at,
     get_estimate_posts_by_author,
     get_estimate_stats,
@@ -17,6 +19,7 @@ from db.crud import (
     get_existing_estimate_wr_ids,
     save_estimate_settings,
     save_estimate_crawl_results,
+    save_estimate_name_overrides,
     update_estimate_posted_at,
 )
 from db.database import get_db
@@ -77,6 +80,29 @@ class EstimateSettingsResponse(BaseModel):
     require_assembly: bool = True
 
 
+class EstimateDeleteResponse(BaseModel):
+    deleted: bool
+    wr_id: int
+
+
+class EstimateProductNameOverrideItem(BaseModel):
+    product_name: str
+    override_name: str = ""
+    used_count: int
+
+
+class EstimateProductNameOverridesResponse(BaseModel):
+    items: list[EstimateProductNameOverrideItem]
+
+
+class EstimateProductNameOverridesPayload(BaseModel):
+    overrides: dict[str, str] = Field(default_factory=dict)
+
+
+class EstimateProductNameOverridesSaveResponse(BaseModel):
+    overrides: dict[str, str]
+
+
 @router.post("/estimates/crawl", response_model=EstimateCrawlResponse)
 async def crawl_estimate_posts(
     payload: EstimateCrawlRequest,
@@ -134,6 +160,40 @@ async def estimate_posts(
         except httpx.HTTPError:
             pass
     return await get_estimate_posts_by_author(db, limit=limit)
+
+
+@router.delete("/estimates/posts/{wr_id}", response_model=EstimateDeleteResponse)
+async def delete_estimate_post_route(
+    wr_id: int,
+    _admin=Depends(admin_required),
+    db: AsyncSession = Depends(get_db),
+):
+    deleted = await delete_estimate_post(db, wr_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="estimate post not found")
+    return EstimateDeleteResponse(deleted=True, wr_id=wr_id)
+
+
+@router.get("/estimates/product-name-overrides", response_model=EstimateProductNameOverridesResponse)
+async def estimate_product_name_overrides(
+    limit: int = Query(1000, ge=1, le=5000),
+    _admin=Depends(admin_required),
+    db: AsyncSession = Depends(get_db),
+):
+    items = await get_estimate_product_name_overrides(db, limit=limit)
+    return EstimateProductNameOverridesResponse(
+        items=[EstimateProductNameOverrideItem(**item) for item in items]
+    )
+
+
+@router.put("/estimates/product-name-overrides", response_model=EstimateProductNameOverridesSaveResponse)
+async def update_estimate_product_name_overrides(
+    payload: EstimateProductNameOverridesPayload,
+    _admin=Depends(admin_required),
+    db: AsyncSession = Depends(get_db),
+):
+    overrides = await save_estimate_name_overrides(db, payload.overrides)
+    return EstimateProductNameOverridesSaveResponse(overrides=overrides)
 
 
 @router.get("/estimates/settings", response_model=EstimateSettingsResponse)

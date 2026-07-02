@@ -196,11 +196,22 @@ def _matches_names(post: dict, target_names: list[str]) -> bool:
     return any(name.casefold() in haystack for name in target_names if name.strip())
 
 
+def _estimate_title_key(post: dict) -> str:
+    author = _clean_text(post.get("author")).casefold()
+    title = _clean_text(post.get("title")).casefold()
+    return f"{author}\0{title}" if title else f"wr_id:{post['wr_id']}"
+
+
 def matching_posts(posts: list[dict], target_names: list[str]) -> list[dict]:
     matched = []
+    seen_title_keys: set[str] = set()
     for post in sorted(posts, key=lambda item: item["wr_id"], reverse=True):
         if not _matches_names(post, target_names):
             continue
+        key = _estimate_title_key(post)
+        if key in seen_title_keys:
+            continue
+        seen_title_keys.add(key)
         matched.append(post)
     return matched
 

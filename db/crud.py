@@ -8,6 +8,7 @@ from db.models import Product, CrawlLog, DailyPrice, SourceEnum, CategoryEnum, E
 
 _NATURAL_SORT_RE = re.compile(r"(\d+)")
 ESTIMATE_SETTINGS_KEY = "estimate_crawler"
+ESTIMATE_NAME_OVERRIDES_KEY = "estimate_name_overrides"
 DEFAULT_ESTIMATE_TARGET_NAMES = ["모루", "궁금", "엣지", "ㅁㄹ", "사카밤", "멜"]
 
 
@@ -16,6 +17,18 @@ def _natural_sort_key(value: str) -> list:
         int(part) if part.isdigit() else part.casefold()
         for part in _NATURAL_SORT_RE.split(value)
     ]
+
+
+def _clean_name_overrides(value: dict | None) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    cleaned = {}
+    for raw_name, override_name in value.items():
+        raw = str(raw_name).strip()
+        override = str(override_name).strip()
+        if raw and override:
+            cleaned[raw] = override
+    return cleaned
 
 
 async def upsert_products(session: AsyncSession, products: list[dict]):
@@ -491,6 +504,17 @@ async def update_estimate_posted_at(session: AsyncSession, posted_at_by_wr_id: d
     return updated
 
 
+async def delete_estimate_post(session: AsyncSession, wr_id: int) -> bool:
+    post = await session.scalar(select(EstimatePost).where(EstimatePost.wr_id == wr_id))
+    if post is None:
+        return False
+
+    await session.execute(delete(EstimateItem).where(EstimateItem.wr_id == wr_id))
+    await session.delete(post)
+    await session.commit()
+    return True
+
+
 async def save_estimate_crawl_results(session: AsyncSession, results: list[dict]) -> int:
     saved = 0
     for result in results:
@@ -540,6 +564,7 @@ async def get_estimate_stats(
     sort: str = "count_desc",
     limit: int = 500,
 ) -> list[dict]:
+    name_overrides = await get_estimate_name_overrides(session)
     stmt = select(EstimateItem)
     if part_category:
         stmt = stmt.where(EstimateItem.part_category == part_category)
@@ -551,11 +576,12 @@ async def get_estimate_stats(
     result = await session.execute(stmt)
     stats: dict[tuple[str, str], dict] = {}
     for item in result.scalars().all():
-        key = (item.part_category, item.product_name)
+        display_name = name_overrides.get(item.product_name, item.product_name)
+        key = (item.part_category, display_name)
         if key not in stats:
             stats[key] = {
                 "part_category": item.part_category,
-                "product_name": item.product_name,
+                "product_name": display_name,
                 "latest_price": item.unit_price,
                 "latest_total_price": item.total_price,
                 "latest_crawled_at": item.crawled_at,
@@ -576,6 +602,62 @@ async def get_estimate_stats(
         rows.sort(key=lambda row: (-row["used_count"], _natural_sort_key(row["product_name"])))
 
     return rows[:limit]
+
+
+async def get_estimate_name_overrides(session: AsyncSession) -> dict[str, str]:
+    result = await session.execute(
+        select(AppSetting).where(AppSetting.setting_key == ESTIMATE_NAME_OVERRIDES_KEY)
+    )
+    setting = result.scalar_one_or_none()
+    if not setting:
+        return {}
+    try:
+        data = json.loads(setting.setting_value)
+    except json.JSONDecodeError:
+        return {}
+    return _clean_name_overrides(data)
+
+
+async def save_estimate_name_overrides(session: AsyncSession, overrides: dict[str, str]) -> dict[str, str]:
+    cleaned = _clean_name_overrides(overrides)
+    payload = json.dumps(cleaned, ensure_ascii=False)
+    result = await session.execute(
+        select(AppSetting).where(AppSetting.setting_key == ESTIMATE_NAME_OVERRIDES_KEY)
+    )
+    setting = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    if setting:
+        setting.setting_value = payload
+        setting.updated_at = now
+    else:
+        session.add(AppSetting(
+            setting_key=ESTIMATE_NAME_OVERRIDES_KEY,
+            setting_value=payload,
+            updated_at=now,
+        ))
+    await session.commit()
+    return cleaned
+
+
+async def get_estimate_product_name_overrides(session: AsyncSession, limit: int = 1000) -> list[dict]:
+    overrides = await get_estimate_name_overrides(session)
+    result = await session.execute(
+        select(
+            EstimateItem.product_name,
+            func.count(EstimateItem.id).label("used_count"),
+        )
+        .group_by(EstimateItem.product_name)
+        .order_by(desc("used_count"), asc(EstimateItem.product_name))
+        .limit(limit)
+    )
+    return [
+        {
+            "product_name": row.product_name,
+            "override_name": overrides.get(row.product_name, ""),
+            "used_count": row.used_count,
+        }
+        for row in result.all()
+    ]
 
 
 async def get_estimate_summary(session: AsyncSession) -> dict:

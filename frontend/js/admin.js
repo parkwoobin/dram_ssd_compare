@@ -51,7 +51,11 @@ const adminEl = {
   estimateSettingsSave: document.getElementById('admin-estimate-settings-save'),
   estimateSettingsSummary: document.getElementById('admin-estimate-settings-summary'),
   estimateCrawl: document.getElementById('admin-estimate-crawl'),
+  estimateShowDb: document.getElementById('admin-estimate-show-db'),
+  estimateEditNames: document.getElementById('admin-estimate-edit-names'),
   estimateUpdatedAt: document.getElementById('admin-estimate-updated-at'),
+  estimateNamePanel: document.getElementById('admin-estimate-name-panel'),
+  estimateNameRows: document.getElementById('admin-estimate-name-rows'),
   estimatePosts: document.getElementById('admin-estimate-posts'),
   logout: document.getElementById('admin-logout'),
   sidebarLogout: document.getElementById('admin-sidebar-logout'),
@@ -366,6 +370,9 @@ function adminFormatPostDate(value) {
 }
 
 async function loadAdminEstimateSettings() {
+  if (adminEl.estimateNamePanel) adminEl.estimateNamePanel.hidden = true;
+  if (adminEl.estimatePosts) adminEl.estimatePosts.hidden = false;
+  setAdminEstimateView('db');
   try {
     const res = await adminFetch('/api/estimates/settings');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -415,6 +422,111 @@ async function loadAdminEstimatePosts() {
   }
 }
 
+function setAdminEstimateView(view) {
+  if (adminEl.estimateShowDb) {
+    adminEl.estimateShowDb.classList.toggle('active', view === 'db');
+  }
+  if (adminEl.estimateEditNames) {
+    adminEl.estimateEditNames.classList.toggle('active', view === 'names');
+  }
+}
+
+async function showAdminEstimateDb() {
+  if (adminEl.estimateNamePanel) adminEl.estimateNamePanel.hidden = true;
+  if (adminEl.estimatePosts) adminEl.estimatePosts.hidden = false;
+  setAdminEstimateView('db');
+  await loadAdminEstimatePosts();
+  adminEl.estimatePosts.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function toggleAdminEstimateNamePanel() {
+  if (!adminEl.estimateNamePanel) return;
+  adminEl.estimateNamePanel.hidden = false;
+  if (adminEl.estimatePosts) adminEl.estimatePosts.hidden = true;
+  setAdminEstimateView('names');
+  await loadAdminEstimateNameOverrides();
+  adminEl.estimateNamePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadAdminEstimateNameOverrides() {
+  if (!adminEl.estimateNameRows) return;
+  adminEl.estimateNameRows.innerHTML = '<div class="loading">부품명 목록 불러오는 중...</div>';
+  try {
+    const res = await adminFetch('/api/estimates/product-name-overrides?limit=2000');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderAdminEstimateNameOverrides(data.items || []);
+  } catch (e) {
+    adminEl.estimateNameRows.innerHTML = `<div class="error-msg">부품명 목록 로드 실패: ${adminEscape(e.message)}</div>`;
+  }
+}
+
+function renderAdminEstimateNameOverrides(items) {
+  if (!items.length) {
+    adminEl.estimateNameRows.innerHTML = '<div class="trend-empty">수집된 부품명이 없습니다.</div>';
+    return;
+  }
+
+  adminEl.estimateNameRows.innerHTML = items.map(item => `
+    <div class="estimate-name-row" data-product-name="${adminEscape(item.product_name)}">
+      <div class="estimate-name-original">
+        <strong>${adminEscape(item.product_name)}</strong>
+        <span>${adminFmt(item.used_count)}회 사용</span>
+      </div>
+      <input class="admin-input estimate-name-override" type="text"
+        value="${adminEscape(item.override_name || '')}"
+        placeholder="${adminEscape(item.product_name)}" />
+      <button class="filter-btn estimate-name-save" type="button">저장</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.estimate-name-save').forEach(button => {
+    button.addEventListener('click', () => saveAdminEstimateNameOverride(button));
+  });
+}
+
+async function saveAdminEstimateNameOverride(button) {
+  const row = button.closest('.estimate-name-row');
+  if (!row) return;
+  const productName = row.dataset.productName || '';
+  const input = row.querySelector('.estimate-name-override');
+  if (!productName || !input) return;
+
+  button.disabled = true;
+  button.textContent = '저장 중...';
+  try {
+    const currentRes = await adminFetch('/api/estimates/product-name-overrides?limit=5000');
+    if (!currentRes.ok) throw new Error(`HTTP ${currentRes.status}`);
+    const currentData = await currentRes.json();
+    const overrides = {};
+    for (const item of currentData.items || []) {
+      if (item.override_name) overrides[item.product_name] = item.override_name;
+    }
+    const overrideName = input.value.trim();
+    if (overrideName) {
+      overrides[productName] = overrideName;
+    } else {
+      delete overrides[productName];
+    }
+
+    const res = await adminFetch('/api/estimates/product-name-overrides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ overrides }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    button.textContent = '저장됨';
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = '저장';
+    }, 800);
+  } catch (e) {
+    alert(`저장 실패: ${e.message}`);
+    button.disabled = false;
+    button.textContent = '저장';
+  }
+}
+
 async function loadAdminEstimateUpdatedAt() {
   if (!adminEl.estimateUpdatedAt) return;
   try {
@@ -449,6 +561,7 @@ function renderAdminEstimatePosts() {
             ${adminEscape(adminFormatPostDate(post.posted_at))}
           </div>
         ` : ''}
+        <button class="filter-btn admin-estimate-delete" data-wr-id="${post.wr_id}" type="button">삭제</button>
       </li>
     `).join('');
 
@@ -462,6 +575,28 @@ function renderAdminEstimatePosts() {
       </details>
     `;
   }).join('');
+
+  document.querySelectorAll('.admin-estimate-delete').forEach(button => {
+    button.addEventListener('click', () => deleteAdminEstimatePost(button));
+  });
+}
+
+async function deleteAdminEstimatePost(button) {
+  const wrId = Number(button.dataset.wrId);
+  if (!wrId) return;
+  if (!confirm(`견적 #${wrId}을 삭제할까요?`)) return;
+
+  button.disabled = true;
+  button.textContent = '삭제 중...';
+  try {
+    const res = await adminFetch(`/api/estimates/posts/${wrId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await loadAdminEstimatePosts();
+  } catch (e) {
+    alert(`삭제 실패: ${e.message}`);
+    button.disabled = false;
+    button.textContent = '삭제';
+  }
 }
 
 async function crawlAdminEstimates() {
@@ -518,6 +653,8 @@ adminEl.estimateAuthorKeywords.addEventListener('keydown', e => {
   if (e.key === 'Enter') saveAdminEstimateSettings();
 });
 adminEl.estimateCrawl.addEventListener('click', crawlAdminEstimates);
+if (adminEl.estimateShowDb) adminEl.estimateShowDb.addEventListener('click', showAdminEstimateDb);
+if (adminEl.estimateEditNames) adminEl.estimateEditNames.addEventListener('click', toggleAdminEstimateNamePanel);
 adminEl.logout.addEventListener('click', logoutAdmin);
 if (adminEl.sidebarLogout) adminEl.sidebarLogout.addEventListener('click', logoutAdmin);
 if (adminEl.themeToggle) {
