@@ -51,7 +51,7 @@ const adminEl = {
   estimateSettingsSave: document.getElementById('admin-estimate-settings-save'),
   estimateSettingsSummary: document.getElementById('admin-estimate-settings-summary'),
   estimateCrawl: document.getElementById('admin-estimate-crawl'),
-  estimateStatus: document.getElementById('admin-estimate-status'),
+  estimateUpdatedAt: document.getElementById('admin-estimate-updated-at'),
   estimatePosts: document.getElementById('admin-estimate-posts'),
   logout: document.getElementById('admin-logout'),
   sidebarLogout: document.getElementById('admin-sidebar-logout'),
@@ -82,6 +82,35 @@ function adminEscape(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function parseAdminUtcTimestamp(value) {
+  if (!value) return null;
+  const text = String(value);
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(text);
+  return new Date(hasTimezone ? text : `${text}Z`);
+}
+
+function adminFormatKstMinuteFromUtc(value) {
+  const date = parseAdminUtcTimestamp(value);
+  if (!date || Number.isNaN(date.getTime())) return '-';
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(date).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const month = String(parts.month).padStart(2, '0');
+  const day = String(parts.day).padStart(2, '0');
+  const hour = String(parts.hour).padStart(2, '0');
+  const dayPeriod = parts.dayPeriod === 'AM' ? '오전' : parts.dayPeriod === 'PM' ? '오후' : (parts.dayPeriod || '');
+  return `${parts.year}.${month}.${day} ${dayPeriod} ${hour}시 ${parts.minute}분`;
 }
 
 async function adminFetch(url, options) {
@@ -160,7 +189,7 @@ function renderAdminProducts() {
       <td><input class="admin-cell-input admin-product-name" value="${adminEscape(item.name)}" /></td>
       <td class="right"><input class="admin-cell-input admin-product-price" type="number" value="${item.price ?? ''}" /></td>
       <td class="right"><input class="admin-cell-input admin-product-rank" type="number" value="${item.rank ?? ''}" /></td>
-      <td>${new Date(item.crawled_at).toLocaleString('ko-KR')}</td>
+      <td>${adminFormatKstMinuteFromUtc(item.crawled_at)}</td>
       <td class="center"><button class="filter-btn admin-product-save">저장</button></td>
     </tr>
   `).join('') || '<tr><td colspan="6"><div class="loading">데이터 없음</div></td></tr>';
@@ -318,11 +347,11 @@ function parseAdminEstimateKeywords(value) {
 
 function updateAdminEstimateSummary(names) {
   const authorText = names.length ? `글쓴이 포함: ${names.join(', ')}` : '기본 글쓴이 키워드 사용';
-  adminEl.estimateSettingsSummary.textContent = `${authorText} · 스마트 조립비 포함만`;
+  adminEl.estimateSettingsSummary.textContent = authorText;
 }
 
 function adminFormatDate(value) {
-  return value ? new Date(value).toLocaleString('ko-KR') : '';
+  return adminFormatKstMinuteFromUtc(value);
 }
 
 function adminFormatPostDate(value) {
@@ -376,12 +405,25 @@ async function saveAdminEstimateSettings() {
 async function loadAdminEstimatePosts() {
   adminEl.estimatePosts.innerHTML = '<div class="loading">수집된 견적 목록 불러오는 중...</div>';
   try {
+    await loadAdminEstimateUpdatedAt();
     const res = await adminFetch('/api/estimates/posts?limit=1000');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     adminState.estimatePostGroups = await res.json();
     renderAdminEstimatePosts();
   } catch (e) {
     adminEl.estimatePosts.innerHTML = `<div class="error-msg">견적 목록 로드 실패: ${adminEscape(e.message)}</div>`;
+  }
+}
+
+async function loadAdminEstimateUpdatedAt() {
+  if (!adminEl.estimateUpdatedAt) return;
+  try {
+    const res = await adminFetch('/api/estimates/stats?limit=1');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    adminEl.estimateUpdatedAt.textContent = `최근 수집 ${adminFormatKstMinuteFromUtc(data.summary?.latest_crawled_at)}`;
+  } catch (e) {
+    adminEl.estimateUpdatedAt.textContent = '최근 수집 -';
   }
 }
 
@@ -434,11 +476,12 @@ async function crawlAdminEstimates() {
       body: JSON.stringify({ names: settings.names || [], max_pages: 3 }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    adminEl.estimateStatus.textContent = `신규 ${data.saved_posts || 0}건 저장`;
+    await res.json();
     await loadAdminEstimatePosts();
   } catch (e) {
-    adminEl.estimateStatus.textContent = `수집 실패: ${e.message}`;
+    if (adminEl.estimateUpdatedAt) {
+      adminEl.estimateUpdatedAt.textContent = `수집 실패: ${e.message}`;
+    }
   } finally {
     adminEl.estimateCrawl.disabled = false;
     adminEl.estimateCrawl.textContent = '최근 3페이지 수동 수집';
