@@ -552,8 +552,7 @@ body[data-theme="dark"] .icon-action {
 }
 
 .estimate-settings-panel {
-  border-top: 1px solid var(--gray-200);
-  padding-top: 12px;
+  padding-top: 2px;
 }
 
 .estimate-settings-panel label {

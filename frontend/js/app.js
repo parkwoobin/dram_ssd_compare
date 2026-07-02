@@ -146,6 +146,35 @@ function fmtTooltipWon(value) {
   return `${Math.round(Number(value)).toLocaleString('ko-KR')}원`;
 }
 
+function parseUtcTimestamp(value) {
+  if (!value) return null;
+  const text = String(value);
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(text);
+  return new Date(hasTimezone ? text : `${text}Z`);
+}
+
+function formatKstMinuteFromUtc(value) {
+  const date = parseUtcTimestamp(value);
+  if (!date || Number.isNaN(date.getTime())) return '-';
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(date).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const month = String(parts.month).padStart(2, '0');
+  const day = String(parts.day).padStart(2, '0');
+  const hour = String(parts.hour).padStart(2, '0');
+  const dayPeriod = parts.dayPeriod === 'AM' ? '오전' : parts.dayPeriod === 'PM' ? '오후' : (parts.dayPeriod || '');
+  return `${parts.year}.${month}.${day} ${dayPeriod} ${hour}시 ${parts.minute}분`;
+}
+
 function rankBadge(rank) {
   const cls = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
   return `<span class="rank-badge ${cls}">${rank}</span>`;
@@ -653,9 +682,7 @@ async function loadEstimateStats() {
     renderEstimateCategoryOptions(data.categories || []);
     renderEstimateTable(state.estimateItems);
 
-    const latest = data.summary.latest_crawled_at
-      ? new Date(data.summary.latest_crawled_at).toLocaleString('ko-KR')
-      : '-';
+    const latest = formatKstMinuteFromUtc(data.summary.latest_crawled_at);
     el.estimateStatsBar.innerHTML = `
       <span>저장 견적 <strong>${Number(data.summary.post_count || 0).toLocaleString('ko-KR')}건</strong></span>
       <span>·</span>
