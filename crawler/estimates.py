@@ -196,20 +196,13 @@ def _matches_names(post: dict, target_names: list[str]) -> bool:
     return any(name.casefold() in haystack for name in target_names if name.strip())
 
 
-def _author_key(post: dict) -> str:
-    author = _clean_text(post.get("author"))
-    return f"author:{author.casefold()}" if author else f"post:{post['wr_id']}"
-
-
-def latest_posts_by_author(posts: list[dict], target_names: list[str]) -> list[dict]:
-    latest: dict[str, dict] = {}
+def matching_posts(posts: list[dict], target_names: list[str]) -> list[dict]:
+    matched = []
     for post in sorted(posts, key=lambda item: item["wr_id"], reverse=True):
         if not _matches_names(post, target_names):
             continue
-        key = _author_key(post)
-        if key not in latest:
-            latest[key] = post
-    return list(latest.values())
+        matched.append(post)
+    return matched
 
 
 async def crawl_estimates(
@@ -241,7 +234,7 @@ async def crawl_estimates(
             seen_wr_ids.add(post["wr_id"])
             unique_posts.append(post)
 
-        for post in latest_posts_by_author(unique_posts, target_names):
+        for post in matching_posts(unique_posts, target_names):
             wr_id = post["wr_id"]
             if wr_id in known_wr_ids:
                 continue

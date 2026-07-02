@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from crawler.danawa import crawl as danawa_crawl
 from crawler.smtcom import crawl as smtcom_crawl
-from crawler.estimates import _matches_names, has_assembly_fee, latest_posts_by_author, parse_estimate_detail, parse_posted_at
+from crawler.estimates import _matches_names, has_assembly_fee, matching_posts, parse_estimate_detail, parse_posted_at
 from crawler.matcher import match_products, _storage_gb, _ddr_gen, _extract_brand
 
 
@@ -141,16 +141,16 @@ def test_has_assembly_fee_checks_detail_rows():
     assert not has_assembly_fee("<table><tr><td>조립 문의</td><td>가격 없음</td></tr></table>")
 
 
-def test_latest_posts_by_author_keeps_only_newest_per_author():
+def test_matching_posts_keeps_all_matching_posts():
     posts = [
         {"wr_id": 103, "author": "홍길동", "title": "최신"},
         {"wr_id": 102, "author": "김철수", "title": "다른 사람"},
         {"wr_id": 101, "author": "홍길동", "title": "이전"},
     ]
 
-    latest = latest_posts_by_author(posts, [])
+    latest = matching_posts(posts, ["홍길동"])
 
-    assert [post["wr_id"] for post in latest] == [103, 102]
+    assert [post["wr_id"] for post in latest] == [103, 101]
 
 
 def test_match_rejects_used_laptop_memory_to_new_laptop_memory():
