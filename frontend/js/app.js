@@ -877,6 +877,7 @@ function updateMainTabUrl(cat) {
 function switchTab(cat, updateUrl = true) {
   if (!MAIN_TAB_SLUGS[cat]) cat = 'memory';
   if (updateUrl) updateMainTabUrl(cat);
+  document.body.dataset.tab = cat; // 테마 전환 속도를 탭별로 다르게 하기 위한 힌트
   el.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
   document.querySelectorAll('.sidebar-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
 

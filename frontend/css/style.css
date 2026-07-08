@@ -92,6 +92,10 @@ body {
   line-height: 1.5;
   transition: background-color .15s linear, color .15s linear;
 }
+/* DRAM(메모리) 탭은 행 수가 많아 리페인트 비용이 커서 전환을 더 짧게 */
+body[data-tab="memory"] {
+  transition-duration: .05s;
+}
 
 /* ── Header ─────────────────────────────────────────────────── */
 header {
