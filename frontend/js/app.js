@@ -709,7 +709,7 @@ function renderEstimateTable(items) {
         <td>
           <div class="estimate-usage-cell" title="${Number(item.used_count).toLocaleString('ko-KR')}회">
             <span class="estimate-count-wrap">
-              <span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}</span>
+              <span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}개</span>
               ${weeklyBadge}
             </span>
             <div class="estimate-bar-track">
