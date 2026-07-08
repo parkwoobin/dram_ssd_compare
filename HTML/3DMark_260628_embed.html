@@ -207,7 +207,15 @@ const markFmt = n => (n == null ? "" : String(n));
 let kind = "desktop";
 let bench = Object.keys(DATA.desktop)[0] || "timespy";
 let orientation = "vertical";
-let theme = (localStorage.getItem('3dmark_theme') || localStorage.getItem('site_theme') || 'light');
+let theme = (function () {
+  // 앱에 임베드된 경우: 앱이 래퍼(.mark-root)에 부여한 테마를 그대로 따른다.
+  // (예전 버전이 localStorage 에 남긴 3dmark_theme 이 site_theme 를 덮어써서
+  //  다크 모드인데 차트만 라이트로 보이던 버그 방지)
+  const root = document.querySelector('.mark-root');
+  if (root) return root.classList.contains('light') ? 'light' : 'dark';
+  // 단독 실행(임베드 아님) 시에는 사이트 테마 → 위젯 테마 → 기본값 순
+  return localStorage.getItem('site_theme') || localStorage.getItem('3dmark_theme') || 'light';
+})();
 let activeSeries = new Set();
 let distMode = false;           // 성능 분포(히스토그램) 모드
 let selecting = false;          // 비교 선택 진행 중
