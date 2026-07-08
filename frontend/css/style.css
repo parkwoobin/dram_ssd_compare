@@ -170,7 +170,8 @@ header .admin-login-link {
   transition: all 0.15s;
   padding: 0;
 }
-.theme-toggle-btn:hover { border-color: var(--gray-400); background: var(--gray-100); transform: rotate(14deg); }
+.theme-toggle-btn:hover { border-color: var(--gray-400); background: var(--gray-100); }
+.theme-toggle-btn:active { transform: scale(.9); }
 
 @media (max-width: 720px) {
   header {
@@ -196,7 +197,8 @@ header .admin-login-link {
 .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
 
 /* ── Tabs ────────────────────────────────────────────────────── */
-.tabs {
+.main-tabs, .admin-tabs {
+  position: relative;
   display: inline-flex;
   gap: 2px;
   margin-bottom: 20px;
@@ -206,7 +208,14 @@ header .admin-login-link {
   border-radius: 100px;
   animation: fadeInUp .5s var(--ease) .05s both;
 }
+/* 패드 폭에서는 6개 탭이 두 줄로 감싸져 완전한 캡슐 모양이 코너를 뚫고 나가 보이므로,
+   배경 트랙만 사각형에 가깝게(버튼 자체는 계속 완전히 둥근 pill 유지) */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .main-tabs, .admin-tabs { border-radius: 20px; }
+}
 .tab-btn {
+  position: relative;
+  z-index: 1;
   height: 38px;
   padding: 0 20px;
   display: inline-flex;
@@ -231,6 +240,26 @@ header .admin-login-link {
   box-shadow: var(--shadow-sm);
 }
 
+/* JS가 붙인 슬라이딩 흰색 바 — 지원 컨테이너에서는 버튼 자체 배경을 끄고 이 바만 보여준다 */
+.slide-indicator {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 0;
+  background: var(--surface);
+  border-radius: 100px;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .28s var(--ease), width .22s var(--ease), height .22s var(--ease), opacity .15s var(--ease);
+}
+.has-indicator .tab-btn.active,
+.has-indicator .sort-btn.active,
+.has-indicator .trend-cat-btn.active,
+.has-indicator .days-btn.active {
+  background: transparent;
+  box-shadow: none;
+}
+
 /* ── Search bar ──────────────────────────────────────────────── */
 .search-bar { margin-bottom: 14px; animation: fadeInUp .5s var(--ease) .08s both; }
 #search-input {
@@ -248,19 +277,28 @@ header .admin-login-link {
 #search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); transform: translateY(-1px); }
 
 /* ── Sort bar ────────────────────────────────────────────────── */
+.sort-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  animation: fadeInUp .5s var(--ease) .1s both;
+}
 .sort-bar {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 14px;
   padding: 4px;
   background: var(--gray-100);
   border-radius: 100px;
   flex-wrap: wrap;
-  animation: fadeInUp .5s var(--ease) .1s both;
 }
-.sort-bar span { font-size: 12px; color: var(--gray-400); font-weight: 600; padding: 0 8px 0 6px; }
+.sort-label { font-size: 12px; color: var(--gray-400); font-weight: 600; white-space: nowrap; }
 .sort-btn {
+  position: relative;
+  z-index: 1;
   height: 30px;
   padding: 0 14px;
   border: none;
@@ -291,6 +329,7 @@ header .admin-login-link {
   animation: fadeInUp .5s var(--ease) .12s both;
 }
 .filter-group {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -300,8 +339,10 @@ header .admin-login-link {
   border-radius: 9px;
   padding: 3px;
 }
-.filter-label { font-size: 12px; font-weight: 700; color: var(--gray-400); white-space: nowrap; padding: 0 8px 0 6px; background: none; }
+.filter-label { position: relative; z-index: 1; font-size: 12px; font-weight: 700; color: var(--gray-400); white-space: nowrap; padding: 0 8px 0 6px; background: none; }
 .filter-btn {
+  position: relative;
+  z-index: 1;
   height: 26px;
   padding: 0 12px;
   display: inline-flex;
@@ -319,8 +360,20 @@ header .admin-login-link {
 }
 .filter-group .filter-btn { margin-bottom: 0; }
 .filter-btn:hover { background: var(--gray-100); }
+.filter-btn:active { transform: scale(.94); }
 .filter-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
-.filter-sep { color: var(--gray-300); font-size: 16px; margin: 0 2px; user-select: none; }
+.filter-sep { position: relative; z-index: 1; color: var(--gray-300); font-size: 16px; margin: 0 2px; user-select: none; }
+
+/* 용량/DDR 필터는 파란 바가 슬라이드 — 인디케이터 색·모양만 필터칩에 맞게 override */
+.filter-group .slide-indicator {
+  background: var(--primary);
+  border-radius: 6px;
+  box-shadow: none;
+}
+.has-indicator .filter-btn.active {
+  background: transparent;
+  border-color: transparent;
+}
 
 .toggle-label {
   display: flex;
@@ -511,8 +564,10 @@ tr.skeleton-row:hover { background: none; }
   gap: 12px;
   animation: fadeInUp .5s var(--ease) both;
 }
-.trend-cat-tabs { display: inline-flex; gap: 2px; padding: 4px; background: var(--gray-100); border-radius: 100px; width: fit-content; }
+.trend-cat-tabs { position: relative; display: inline-flex; gap: 2px; padding: 4px; background: var(--gray-100); border-radius: 100px; width: fit-content; }
 .trend-cat-btn {
+  position: relative;
+  z-index: 1;
   height: 32px;
   padding: 0 16px;
   border: none;
@@ -523,8 +578,9 @@ tr.skeleton-row:hover { background: none; }
   cursor: pointer;
   color: var(--gray-600);
   font-family: inherit;
-  transition: background-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease);
+  transition: background-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), transform .12s var(--ease);
 }
+.trend-cat-btn:active { transform: scale(.95); }
 .trend-cat-btn.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow-sm); }
 
 .trend-controls {
@@ -557,8 +613,10 @@ tr.skeleton-row:hover { background: none; }
   transition: border-color .2s var(--ease);
 }
 .trend-select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
-.trend-days-group { display: inline-flex; gap: 2px; padding: 4px; background: var(--gray-100); border-radius: 100px; }
+.trend-days-group { position: relative; display: inline-flex; gap: 2px; padding: 4px; background: var(--gray-100); border-radius: 100px; }
 .days-btn {
+  position: relative;
+  z-index: 1;
   height: 30px;
   padding: 0 14px;
   border: none;
@@ -568,8 +626,9 @@ tr.skeleton-row:hover { background: none; }
   cursor: pointer;
   color: var(--gray-600);
   font-family: inherit;
-  transition: background-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease);
+  transition: background-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), transform .12s var(--ease);
 }
+.days-btn:active { transform: scale(.95); }
 .days-btn.active { background: var(--surface); color: var(--primary); font-weight: 700; box-shadow: var(--shadow-sm); }
 
 .trend-chart-wrap {
@@ -743,6 +802,7 @@ tr.skeleton-row:hover { background: none; }
   color: var(--gray-900);
   transform: translateY(-1px);
 }
+.estimate-pill-action:active { transform: scale(.96); }
 
 .estimate-pill-action.active {
   background: var(--primary-dark);
@@ -1021,6 +1081,14 @@ tr.skeleton-row:hover { background: none; }
   transition: width .5s var(--ease);
 }
 
+/* 견적 테이블 부품명: 320px 캡을 풀어 컬럼 폭을 그대로 사용 */
+#estimate-table .product-name { max-width: none; }
+/* 넓은 웹 화면에서는 아무리 길어도 한 줄로 (필요 시 표가 가로 스크롤).
+   패드·모바일(≤1024px)에서는 컬럼 폭에 맞춰 자연스럽게 줄바꿈 */
+@media (min-width: 1025px) {
+  #estimate-table .product-name { white-space: nowrap; }
+}
+
 /* ── 인라인 HTML 섹션 ────────────────────────────────────────── */
 [id="3dmark-section"] {
   overflow: hidden;
@@ -1094,8 +1162,10 @@ tr.skeleton-row:hover { background: none; }
   color: var(--gray-600);
   padding: 4px 8px;
   border-radius: 4px;
+  transition: background-color .15s var(--ease), transform .12s var(--ease);
 }
 .sidebar-close-btn:hover { background: var(--gray-100); }
+.sidebar-close-btn:active { transform: scale(.9); }
 
 .sidebar-tabs {
   display: flex;
@@ -1149,6 +1219,7 @@ tr.skeleton-row:hover { background: none; }
   transition: background-color .15s var(--ease), color .15s var(--ease), transform .15s var(--ease);
 }
 .sidebar-tab-btn:hover { background: var(--gray-100); color: var(--gray-900); transform: translateX(2px); }
+.sidebar-tab-btn:active { transform: scale(.97); }
 .sidebar-tab-btn.active { background: var(--primary); color: #fff; font-weight: 600; box-shadow: 0 4px 12px var(--primary-soft); }
 
 /* ── Footer ─────────────────────────────────────────────────── */
@@ -1183,6 +1254,7 @@ tr.skeleton-row:hover { background: none; }
   background: var(--gray-50);
   transform: translateY(-1px);
 }
+.github-link:active { transform: scale(.96); }
 
 .admin-login-link {
   display: block;
@@ -1488,7 +1560,7 @@ body[data-theme="dark"] .admin-estimate-post-link {
     overflow-wrap: anywhere;
     text-align: left;
   }
-  .tabs { display: none; }
+  .main-tabs, .admin-tabs { display: none; }
   .hamburger-btn { display: inline-flex; }
 
   /* 부품명이 길어도 잘리지 않도록 표를 카드형 리스트로 재구성 */
@@ -1510,8 +1582,7 @@ body[data-theme="dark"] .admin-estimate-post-link {
       "rank  dname  dname"
       ".     dprice dprice"
       ".     sname  sname"
-      ".     sprice sprice"
-      ".     diff   diff";
+      ".     diff   sprice";
     column-gap: 10px;
     row-gap: 7px;
     padding: 16px;
@@ -1530,8 +1601,8 @@ body[data-theme="dark"] .admin-estimate-post-link {
     padding-top: 9px !important;
     border-top: 1px dashed var(--gray-200);
   }
-  #compare-table td:nth-child(5) { grid-area: sprice; }
-  #compare-table td:nth-child(6) { grid-area: diff; justify-self: start; align-self: center; }
+  #compare-table td:nth-child(5) { grid-area: sprice; text-align: right; align-self: center; }
+  #compare-table td:nth-child(6) { grid-area: diff; align-self: center; justify-self: start; padding-left: 0; }
   #compare-table td:nth-child(6) .diff { flex-direction: row; gap: 6px; }
 
   #compare-table td:nth-child(3)::before,

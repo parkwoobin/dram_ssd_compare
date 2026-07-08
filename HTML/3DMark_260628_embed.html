@@ -41,6 +41,11 @@
   .mark-root .hbar2 #distBtn { margin-left:0; }
   .mark-root .hbar2 .searchbox { flex:1 1 auto !important; max-width:none; }
   .mark-root #search { width:100%; }
+  /* 버튼 눌림 애니메이션 */
+  .mark-root button, .mark-root .tab, .mark-root .chip, .mark-root select {
+    transition: transform .12s ease, border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+  }
+  .mark-root button:active, .mark-root .tab:active, .mark-root .chip:active { transform: scale(.94); }
 </style>
 </head>
 <body>

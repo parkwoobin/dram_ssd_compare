@@ -210,6 +210,40 @@ function skeletonRows(widths, count = 10) {
   return Array.from({ length: count }, (_, i) => skeletonRow(widths, i)).join('');
 }
 
+// ── Sliding active-tab indicator ────────────────────────────────
+const indicatorUpdaters = {};
+const filterGroupUpdaters = [];
+
+function attachSlideIndicator(container, key) {
+  if (!container) return null;
+  const indicator = document.createElement('span');
+  indicator.className = 'slide-indicator';
+  container.insertBefore(indicator, container.firstChild);
+  container.classList.add('has-indicator');
+
+  function update() {
+    const active = container.querySelector(':scope > .active');
+    if (!active || active.offsetParent === null) { indicator.style.opacity = '0'; return; }
+    indicator.style.opacity = '1';
+    indicator.style.width = `${active.offsetWidth}px`;
+    indicator.style.height = `${active.offsetHeight}px`;
+    indicator.style.transform = `translate(${active.offsetLeft}px, ${active.offsetTop}px)`;
+  }
+
+  const mo = new MutationObserver(() => requestAnimationFrame(update));
+  Array.from(container.children).forEach(child => {
+    if (child !== indicator) mo.observe(child, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  indicator.style.transition = 'none';
+  update();
+  requestAnimationFrame(() => { indicator.style.transition = ''; });
+  window.addEventListener('resize', () => requestAnimationFrame(update));
+
+  if (key) indicatorUpdaters[key] = update;
+  return update;
+}
+
 // ── Compare table ─────────────────────────────────────────────
 
 function renderTable(items) {
@@ -643,12 +677,20 @@ function showCompare(cat) {
   el.compareSection.style.display = '';
   el.memoryFilters.style.display = cat === 'memory' ? '' : 'none';
   el.ssdFilters.style.display = cat === 'ssd' ? '' : 'none';
+  requestAnimationFrame(() => {
+    indicatorUpdaters.sortBar && indicatorUpdaters.sortBar();
+    filterGroupUpdaters.forEach(fn => fn());
+  });
 }
 
 function showTrend() {
   hideAll();
   el.trendSection.style.display = '';
   loadTrendProducts();
+  requestAnimationFrame(() => {
+    indicatorUpdaters.trendCatTabs && indicatorUpdaters.trendCatTabs();
+    indicatorUpdaters.trendDays && indicatorUpdaters.trendDays();
+  });
 }
 
 function renderEstimateTable(items) {
@@ -965,6 +1007,15 @@ document.querySelectorAll('.days-btn').forEach(btn => {
 // ── Init ──────────────────────────────────────────────────────
 // Prevent Enter key from accidentally activating first button: ensure buttons are non-submit
 document.querySelectorAll('button').forEach(b => b.setAttribute('type', 'button'));
+
+attachSlideIndicator(document.querySelector('.main-tabs'), 'mainTabs');
+attachSlideIndicator(document.querySelector('.sort-bar'), 'sortBar');
+attachSlideIndicator(document.querySelector('.trend-cat-tabs'), 'trendCatTabs');
+attachSlideIndicator(document.querySelector('.trend-days-group'), 'trendDays');
+document.querySelectorAll('.filter-group').forEach(group => {
+  const update = attachSlideIndicator(group);
+  if (update) filterGroupUpdaters.push(update);
+});
 
 refreshAdminSessionStatus();
 switchTab(getInitialTabFromPath(), false);

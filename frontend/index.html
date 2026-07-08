@@ -57,7 +57,7 @@
 <div class="container">
 
   <!-- 카테고리 탭 (데스크탑) -->
-  <div class="tabs">
+  <div class="main-tabs">
     <button class="tab-btn active" data-cat="memory">💾 메모리 (RAM)</button>
     <button class="tab-btn" data-cat="ssd">⚡ SSD</button>
     <button class="tab-btn" data-cat="trend">📈 가격 추세</button>
@@ -74,11 +74,13 @@
     </div>
 
     <!-- 정렬 -->
-    <div class="sort-bar">
-      <span>정렬:</span>
-      <button class="sort-btn active" data-sort="popular">인기상품순</button>
-      <button class="sort-btn" data-sort="price_asc">낮은가격순</button>
-      <button class="sort-btn" data-sort="price_desc">높은가격순</button>
+    <div class="sort-bar-wrap">
+      <span class="sort-label">정렬:</span>
+      <div class="sort-bar">
+        <button class="sort-btn active" data-sort="popular">인기상품순</button>
+        <button class="sort-btn" data-sort="price_asc">낮은가격순</button>
+        <button class="sort-btn" data-sort="price_desc">높은가격순</button>
+      </div>
     </div>
 
     <!-- 메모리 필터 -->
