@@ -90,7 +90,7 @@ body {
   color: var(--gray-900);
   font-size: 14px;
   line-height: 1.5;
-  transition: background-color .35s var(--ease), color .35s var(--ease);
+  transition: background-color .15s linear, color .15s linear;
 }
 
 /* ── Header ─────────────────────────────────────────────────── */
