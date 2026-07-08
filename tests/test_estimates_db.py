@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import func, select
@@ -63,6 +63,79 @@ async def test_estimate_stats_uses_latest_crawled_price(tmp_path):
     assert len(stats) == 1
     assert stats[0]["used_count"] == 2
     assert stats[0]["latest_price"] == 280000
+
+
+@pytest.mark.asyncio
+async def test_estimate_stats_sorts_by_weekly_rise(tmp_path):
+    db_path = tmp_path / "estimate_weekly_rise.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    now = datetime(2026, 7, 8, 12, 0, tzinfo=timezone.utc)
+    old_ts = now - timedelta(days=9)
+    recent_ts = now - timedelta(days=2)
+
+    async with session_factory() as session:
+        posts = [
+            EstimatePost(wr_id=201, url="https://example.test/201", crawled_at=old_ts),
+            EstimatePost(wr_id=202, url="https://example.test/202", crawled_at=old_ts),
+            EstimatePost(wr_id=203, url="https://example.test/203", crawled_at=recent_ts),
+            EstimatePost(wr_id=204, url="https://example.test/204", crawled_at=recent_ts),
+        ]
+        session.add_all(posts)
+        await session.flush()
+        session.add_all([
+            EstimateItem(
+                post_id=posts[0].id,
+                wr_id=posts[0].wr_id,
+                part_category="CPU",
+                product_name="Old Favorite",
+                quantity=1,
+                unit_price=200000,
+                total_price=200000,
+                crawled_at=old_ts,
+            ),
+            EstimateItem(
+                post_id=posts[1].id,
+                wr_id=posts[1].wr_id,
+                part_category="CPU",
+                product_name="Old Favorite",
+                quantity=1,
+                unit_price=200000,
+                total_price=200000,
+                crawled_at=old_ts,
+            ),
+            EstimateItem(
+                post_id=posts[2].id,
+                wr_id=posts[2].wr_id,
+                part_category="CPU",
+                product_name="Rising Part",
+                quantity=1,
+                unit_price=300000,
+                total_price=300000,
+                crawled_at=recent_ts,
+            ),
+            EstimateItem(
+                post_id=posts[3].id,
+                wr_id=posts[3].wr_id,
+                part_category="CPU",
+                product_name="Rising Part",
+                quantity=1,
+                unit_price=300000,
+                total_price=300000,
+                crawled_at=recent_ts,
+            ),
+        ])
+        await session.commit()
+
+        stats = await get_estimate_stats(session, sort="weekly_rise_desc", now=now)
+
+    assert [row["product_name"] for row in stats] == ["Rising Part", "Old Favorite"]
+    assert stats[0]["weekly_increase"] == 2
+    assert stats[1]["weekly_increase"] == 0
 
 
 @pytest.mark.asyncio

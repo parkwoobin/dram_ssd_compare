@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "dram-ssd-compare",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "D:\\dram_ssd_compare\\venv\\Scripts\\python.exe",
       "runtimeArgs": ["-m", "uvicorn", "api.main:app", "--port", "8000", "--host", "0.0.0.0"],
       "port": 8000
     }

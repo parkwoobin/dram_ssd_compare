@@ -112,7 +112,7 @@
   /* ===== Sticky TOC ===== */
   nav.toc{
     position:sticky;
-    top:69px;
+    top:65px;
     z-index:50;
     background:color-mix(in srgb, var(--bg) 92%, transparent);
     backdrop-filter:saturate(160%) blur(8px);
@@ -127,8 +127,10 @@
     padding:10px 14px;
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
-    scrollbar-width:thin;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
   }
+  .toc-inner::-webkit-scrollbar{ display:none; height:0; }
   .toc-inner a{
     flex:0 0 auto;
     text-decoration:none;

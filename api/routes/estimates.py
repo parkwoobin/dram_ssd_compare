@@ -27,7 +27,7 @@ from db.database import get_db
 
 router = APIRouter()
 
-EstimateSort = Literal["count_desc", "count_asc", "name_asc", "name_desc"]
+EstimateSort = Literal["count_desc", "count_asc", "weekly_rise_desc", "name_asc", "name_desc"]
 
 
 class EstimateCrawlRequest(BaseModel):
@@ -49,6 +49,7 @@ class EstimateStatItem(BaseModel):
     latest_crawled_at: datetime | None
     used_count: int
     quantity_count: int
+    weekly_increase: int
 
 
 class EstimateStatsResponse(BaseModel):

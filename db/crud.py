@@ -589,8 +589,14 @@ async def get_estimate_stats(
     part_category: str | None = None,
     sort: str = "count_desc",
     limit: int = 500,
+    now: datetime | None = None,
 ) -> list[dict]:
     name_overrides = await get_estimate_name_overrides(session)
+    if now is None:
+        now = datetime.now(timezone.utc)
+    weekly_cutoff_aware = now - timedelta(days=7)
+    weekly_cutoff_naive = weekly_cutoff_aware.replace(tzinfo=None)
+
     stmt = select(EstimateItem)
     if part_category:
         stmt = stmt.where(EstimateItem.part_category == part_category)
@@ -614,13 +620,20 @@ async def get_estimate_stats(
                 "latest_crawled_at": item.crawled_at,
                 "used_count": 0,
                 "quantity_count": 0,
+                "weekly_increase": 0,
             }
         stats[key]["used_count"] += 1
         stats[key]["quantity_count"] += item.quantity or 0
+        if item.crawled_at:
+            cutoff = weekly_cutoff_aware if item.crawled_at.tzinfo else weekly_cutoff_naive
+            if item.crawled_at >= cutoff:
+                stats[key]["weekly_increase"] += 1
 
     rows = list(stats.values())
     if sort == "count_asc":
         rows.sort(key=lambda row: (row["used_count"], _natural_sort_key(row["product_name"])))
+    elif sort == "weekly_rise_desc":
+        rows.sort(key=lambda row: (-row["weekly_increase"], -row["used_count"], _natural_sort_key(row["product_name"])))
     elif sort == "name_asc":
         rows.sort(key=lambda row: _natural_sort_key(row["product_name"]))
     elif sort == "name_desc":

@@ -198,6 +198,18 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
+function skeletonRow(widths, idx) {
+  const cells = widths.map(w => w === null
+    ? `<td class="center"><div class="skeleton-circle"></div></td>`
+    : `<td><div class="skeleton-bar" style="width:${w}"></div></td>`
+  ).join('');
+  return `<tr class="skeleton-row" style="--i:${idx}">${cells}</tr>`;
+}
+
+function skeletonRows(widths, count = 10) {
+  return Array.from({ length: count }, (_, i) => skeletonRow(widths, i)).join('');
+}
+
 // ── Compare table ─────────────────────────────────────────────
 
 function renderTable(items) {
@@ -223,7 +235,7 @@ function renderTable(items) {
   el.tableBody.innerHTML = filtered.map((item, idx) => {
     const rank = idx + 1;
     const smtName = item.smtcom_name
-      ? `<div class="product-name">${item.smtcom_name}</div>`
+      ? `<div class="product-name" title="${escapeHtml(item.smtcom_name)}">${item.smtcom_name}</div>`
       : `<span class="no-match">스마트컴 미취급</span>`;
     const smtPrice = item.smtcom_price != null
       ? `<span class="price">${fmt(item.smtcom_price)}</span>`
@@ -234,10 +246,11 @@ function renderTable(items) {
 
     return `
       <tr class="data-row"
+          style="--i:${idx}"
           data-dname="${dname}"
           data-sname="${sname}">
         <td class="center">${rankBadge(rank)}</td>
-        <td><div class="product-name">${item.danawa_name}</div></td>
+        <td><div class="product-name" title="${escapeHtml(item.danawa_name)}">${item.danawa_name}</div></td>
         <td class="right"><span class="price">${fmt(item.danawa_price)}</span></td>
         <td>${smtName}</td>
         <td class="right">${smtPrice}</td>
@@ -249,10 +262,7 @@ function renderTable(items) {
 }
 
 function showLoading() {
-  el.tableBody.innerHTML = `
-    <tr><td colspan="6">
-      <div class="loading"><div class="spinner"></div> 가격 수집 중...</div>
-    </td></tr>`;
+  el.tableBody.innerHTML = skeletonRows([null, '72%', '45%', '68%', '45%', '38%']);
 }
 
 function showError(msg) {
@@ -645,14 +655,21 @@ function renderEstimateTable(items) {
   const maxCount = Math.max(...items.map(item => item.used_count), 1);
   el.estimateTableBody.innerHTML = items.map((item, idx) => {
     const pct = Math.max(2, Math.round((item.used_count / maxCount) * 100));
+    const weeklyIncrease = Number(item.weekly_increase || 0);
+    const weeklyBadge = weeklyIncrease > 0
+      ? `<span class="estimate-weekly-rise" title="최근 7일 증가">↑${weeklyIncrease.toLocaleString('ko-KR')}</span>`
+      : '';
     return `
-      <tr>
+      <tr style="--i:${idx}">
         <td class="center">${idx + 1}</td>
-        <td><div class="product-name">${escapeHtml(item.product_name)}</div></td>
+        <td><div class="product-name" title="${escapeHtml(item.product_name)}">${escapeHtml(item.product_name)}</div></td>
         <td class="right"><span class="price">${fmt(item.latest_price)}</span></td>
         <td>
           <div class="estimate-usage-cell" title="${Number(item.used_count).toLocaleString('ko-KR')}회">
-            <span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}</span>
+            <span class="estimate-count-wrap">
+              <span class="estimate-count">${Number(item.used_count).toLocaleString('ko-KR')}</span>
+              ${weeklyBadge}
+            </span>
             <div class="estimate-bar-track">
               <div class="estimate-bar-fill" style="width:${pct}%"></div>
             </div>
@@ -674,7 +691,7 @@ function renderEstimateCategoryOptions(categories) {
 }
 
 async function loadEstimateStats() {
-  el.estimateTableBody.innerHTML = `<tr><td colspan="4"><div class="loading">데이터 로딩 중...</div></td></tr>`;
+  el.estimateTableBody.innerHTML = skeletonRows([null, '70%', '40%', '55%'], 8);
   const params = new URLSearchParams({ sort: state.estimateSort });
   if (state.estimateCategory) params.set('part_category', state.estimateCategory);
 
